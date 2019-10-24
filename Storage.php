@@ -1,19 +1,30 @@
 <?php
 
+/**
+ * Класс для хранения данных
+ * Используется самое простейшее хранилище - json файлы со всеми своими нинусами (например потребление памяти)
+ */
 class Storage
 {
+    /** Файл с данными игроков */
     protected static $messagesFile = 'messages.json';
+    /** Файл с сообщениями */
     protected static $dataFile = 'statistics.json';
+
+    /** папка где хранятся данные. должна быть открыта для записи! */
     protected static $dataDir = 'data/';
 
-//    protected $messagesFile = 'messages.json';
-//    protected $dataFile = 'statistics.json';
     protected $username;
 
     public function __construct($username)
     {
         $this->username = $username;
     }
+
+
+    /**
+     * Получить все сообщения в виде массива
+     */
     public function getMessages($fullData=false)
     {
         $sFilename = self::$dataDir . self::$messagesFile;
@@ -36,6 +47,14 @@ class Storage
         }
         return $aMessages;
     }
+
+    /**
+     * Добавить новое сообщение
+     *
+     * @param String $sMessage Сообщение
+     * @param String $type Тип сообщения. Сейчас не используется.
+     * @return array Массив сообщений в виде готовых для вывода строк
+     */
     public function setMessage($sMessage, $type='text')
     {
         $sFilename = self::$dataDir . self::$messagesFile;
@@ -59,6 +78,13 @@ class Storage
         ];
         file_put_contents($sFilename, json_encode($aMessages, JSON_UNESCAPED_UNICODE), LOCK_EX);
     }
+
+    /**
+     * Удалить указанное сообщение
+     *
+     * @param int $msgId Идентификатор удаляемого сообщения
+     * @return void
+     */
     public function deleteMessage($msgId)
     {
         $sFilename = self::$dataDir . self::$messagesFile;
@@ -68,19 +94,29 @@ class Storage
         file_put_contents($sFilename, json_encode($aMessages, JSON_UNESCAPED_UNICODE), LOCK_EX);
     }
 
-    public function clearData()
-    {
-        if (file_exists(self::$dataDir . self::$dataFile)) {
-            rename(self::$dataDir . self::$dataFile, self::$dataDir . 'statistics_' . date('Ymd_his') . '.json');
-        }
-    }
-
+    /**
+     * Удалить все сообщения
+     *
+     * @return void
+     */
     public function clearMessages()
     {
         if (file_exists(self::$dataDir . self::$messagesFile)) {
             rename(self::$dataDir . self::$messagesFile, self::$dataDir . 'messages_' . date('Ymd_his') . '.json');
         }
 
+    }
+
+    /**
+     * Удалить все данные
+     *
+     * @return void
+     */
+    public function clearData()
+    {
+        if (file_exists(self::$dataDir . self::$dataFile)) {
+            rename(self::$dataDir . self::$dataFile, self::$dataDir . 'statistics_' . date('Ymd_his') . '.json');
+        }
     }
 
     public static function getAllData()
@@ -94,6 +130,12 @@ class Storage
         return $aAllData;
     }
 
+    /**
+     * Получить данные для агента (указанного в конструкторе)
+     *
+     * @param int $recordId Какие данные вернуть. 0=первая запись, 1=последняя запись
+     * @return array Массив с данными агента
+     */
     public function getAgentData($recordId=0)
     {
         $aAgentData = [];
@@ -106,6 +148,16 @@ class Storage
         }
         return $aAgentData;
     }
+
+    /**
+     * Записать на диск данные агента
+     *
+     * Если агент не был известен боту, данные сохранятся как самые первые.
+     * Иначе как самые последние и будут перезаписываны при последующих выховах
+     *
+     * @param array $aAgentData Данные для записи
+     * @return void
+     */
     public function setAgentData(array $aAgentData)
     {
         $aAgentData = [
@@ -124,8 +176,14 @@ class Storage
         }
         $aAllData[$this->username] = $aStoredAgentData;
         file_put_contents($sFilename, json_encode($aAllData, JSON_UNESCAPED_UNICODE), LOCK_EX);
-        return true;
     }
+
+    /**
+     * Удалить данные агента
+     *
+     * @param boolean $bLastOnly Удалить только последнюю запись? Если true - самые первые данные не удалятся. Если false - удалится всё. 
+     * @return void
+     */
     public function deleteAgentData($bLastOnly=true)
     {
         $sFilename = self::$dataDir . self::$dataFile;

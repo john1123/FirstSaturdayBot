@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Класс для работы с профилями игроков
+ */
 class IngressProfile
 {
     /**
@@ -45,20 +48,21 @@ class IngressProfile
         'Longest Hacking Streak',
         'Agents Successfully Recruited',
         'Mission Day(s) Attended',
-        'NL-1331 Meetup(s) Attended', //
+        'NL-1331 Meetup(s) Attended',
         'First Saturday Events',
-        'Clear Fields Events',        //
-        'Prime Challenges',           //
-        'Stealth Ops Missions',       //
+        'Clear Fields Events',
+        'Prime Challenges',           // TODO: Надо в профиле игрока убедиться так ли выглядит написание
+        'Stealth Ops Missions',       // TODO: Надо в профиле игрока убедиться так ли выглядит написание
         'Recursions',
     ];
+    //
     protected static $firstKeysPhrase = 'Time Span';
     protected static $firstValuesPhrase = [
         'ЗА ВСЕ ВРЕМЯ',
         'ALL TIME',
     ];
 
-    /** Ключи, которые участвуют в дельте */
+    /** Параметры, которые участвуют в вычислении разницы */
     public static $aDeltaKeys = [
         'Level',
         'Current AP',
@@ -74,6 +78,10 @@ class IngressProfile
 //        'Hacks',
 //        'Glyph Hack Points',
     ];
+
+    /**
+     * Данные агента в виде массива
+     */
     protected $agentData = [];
 
     public function __construct($sProfileData)
@@ -86,6 +94,10 @@ class IngressProfile
 
     }
 
+    /**
+     * Возвращяет разницу между "старым" и "новым" профилями. Смотрит только по self::$aDeltaKeys (остальное не сравнивает)
+     * Параметры могут передаваться либо строкой (будут парситься) или в виде массивов (парситься НЕ будут)
+     */
     public function getDelta($newProfileData, $oldProfileData='')
     {
         if (is_string($newProfileData)) {
@@ -139,9 +151,16 @@ class IngressProfile
         return $aDelta;
     }
 
-    //protected function parseProfile($sProfileData)
+    /**
+     * Парсит строку с профилем. Возвращает массив ['параметр' => 'значение']
+     */
     public static function parseProfile($sProfileData)
     {
+        // 1. строка разбивается на две части - названия и значения
+        // 2. так как почти все значения (кроме первого) - это и строка без пробелов, делим по пробелам
+        //    разделять названия способа нет (не ясен), потому используем названия из массива self::$availableParams
+        // 3. Перебираем значения от конца к началу и каждому присваиваем название из доступных
+        // 4. Помним, что последнее значение (в профиле - первое) - 'За всё время' содержит пробелы!
         if (!is_string($sProfileData) || strlen($sProfileData) < 1) {
             throw new Exception('Ошибка разбора данных профиля. Неверные входные данные');
         }
@@ -162,7 +181,7 @@ class IngressProfile
         foreach ($aValues as $vKey => $value) {
             foreach ($availableParams as $key => $possibleParam) {
                 if (strpos($sKeys, $possibleParam) === false) {continue;}
-                unset($availableParams[$key]);
+                unset($availableParams[$key]); // удаляем, чтобы не присваитвать дважды
                 if ($possibleParam == self::$firstKeysPhrase) {
                     $tmp = array_splice($aValues, $vKey);
                     $value = implode(' ', array_reverse($tmp));

@@ -1,8 +1,16 @@
 <?php
 
+/** Токен, поучаенный у @BotFather */
+define('TELEGRAM_BOT_TOKEN', '!!!Укажите ваш токен здесь!!!!!');
+/** Имя файла бота */
+define('FILENAME_BOT', 'bot.php');
+/** Имя файла для генерации xls-таблицы */
+define('FILENAME_RESULT', 'result.php');
+
 include('vendor/autoload.php');
 include('IngressProfile.php');
 include('Storage.php');
+
 
 use Telegram\Bot\Api;
 use John1123\Logger\File as Logger;
@@ -63,7 +71,9 @@ if($text){
         if (isAdmin($nickName) == true) {
             $response = $telegram->sendDocument([
                 'chat_id' => $chat_id,
-                'document' => 'https://'.MY_DOMAIN.'/result.php/result.xls',
+                // result.xls в конце строки добавлен для того, чтобы телеграм видел в конце строки файл эксель.
+                // Вроде как без этого не заработает (не уверен)
+                'document' => 'https://'.$_SERVER['SERVER_NAME']. str_replace('bot.php', 'result.php', $_SERVER['SCRIPT_NAME']) . '/result.xls',
                 'caption' => 'Файл с результатами',
             ]);
         } else {
@@ -72,6 +82,7 @@ if($text){
         }
     } else if (mb_strtolower($text,'UTF-8') == "помощь") {
         $reply  = 'Бот предназначен для отслеживания и учёта изменений игроков Ingress. Для работы нужно в игре скопировать данные профиля в Ingress Prime и как есть отправить их боту.' . PHP_EOL;
+        $reply  = 'Исходный код доступен по адресу https://github.com/john1123/FirstSaturdayBot/' . PHP_EOL;
 
         $reply .= PHP_EOL . 'Доступны следующие команды:' . PHP_EOL;
         $reply .= '<b>Начать</b> - Удалить все запомненные ранее данные (если они были) и начать всё заново. Поаккуратней с ней :)' . PHP_EOL;

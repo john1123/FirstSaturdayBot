@@ -51,8 +51,10 @@ class IngressProfile
         'NL-1331 Meetup(s) Attended',
         'First Saturday Events',
         'Clear Fields Events',
-        'Prime Challenges',           // TODO: Надо в профиле игрока убедиться так ли выглядит написание
-        'Stealth Ops Missions',       // TODO: Надо в профиле игрока убедиться так ли выглядит написание
+        'OPR Live Events',
+        'Prime Challenges',
+        'Intel Ops Missions',
+        'Stealth Ops Missions',
         'Recursions',
     ];
     //

@@ -22,6 +22,9 @@ $result = $telegram -> getWebhookUpdates();
 
 $text = $result["message"]["text"];
 $chat_id = $result["message"]["chat"]["id"];
+if (strlen($chat_id) < 1) {
+    die('Ошибка. Скрипт нельзя вызывать непосредственно из браузера! Установите вебхук вызвав https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<адрес и путь к скрипту>/bot.php');
+}
 
 $nickName = strlen($result["message"]["from"]["username"]) > 0 ? $result["message"]["from"]["username"] : '';
 $fullUser = $result["message"]["from"]["first_name"] . (strlen($nickName) > 0 ? ' (@' . $nickName . ')' : '');

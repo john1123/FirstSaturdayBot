@@ -82,7 +82,7 @@ if($text){
         }
     } else if (mb_strtolower($text,'UTF-8') == "помощь") {
         $reply  = 'Бот предназначен для отслеживания и учёта изменений игроков Ingress. Для работы нужно в игре скопировать данные профиля в Ingress Prime и как есть отправить их боту.' . PHP_EOL;
-        $reply  = 'Исходный код доступен по адресу https://github.com/john1123/FirstSaturdayBot/' . PHP_EOL;
+        $reply .= 'Исходный код доступен по адресу https://github.com/john1123/FirstSaturdayBot/' . PHP_EOL;
 
         $reply .= PHP_EOL . 'Доступны следующие команды:' . PHP_EOL;
         $reply .= '<b>Начать</b> - Удалить все запомненные ранее данные (если они были) и начать всё заново. Поаккуратней с ней :)' . PHP_EOL;

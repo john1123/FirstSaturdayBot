@@ -7,7 +7,8 @@ define('FILENAME_BOT', 'bot.php');
 /** Имя файла для генерации xls-таблицы */
 define('FILENAME_RESULT', 'result.php');
 
-include('vendor/autoload.php');
+include('test.php');include('TestApi.php');include('vendor/john1123/logger/src/File.php');
+//include('vendor/autoload.php');
 include('IngressProfile.php');
 include('Storage.php');
 
@@ -18,7 +19,10 @@ use John1123\Logger\File as Logger;
 $logger = new Logger('./data/bot_' . date('Ymd') . '.log');
 
 $telegram = new Api(TELEGRAM_BOT_TOKEN);
-$result = $telegram -> getWebhookUpdates();
+//$result = $telegram -> getWebhookUpdates();
+//$result = $telegram -> getWebhookUpdates('Событие создать Simferopol FS');
+//$result = $telegram -> getWebhookUpdates('Событие удалить Simferopol FS1');
+$result = $telegram -> getWebhookUpdates('Начать');
 
 $text = $result["message"]["text"];
 $chat_id = $result["message"]["chat"]["id"];
@@ -50,6 +54,8 @@ if($text){
         $reply .= 'Для учёта ваших данных, отправляйте копию вашего профиля боту (в текстовом виде).' . PHP_EOL;
         $storage->deleteAgentData(false);
         $logger->log('Сброс данных для ' . $nickName);
+        $aEventsList = $storage->eventGet();
+        $reply_markup = $telegram->replyKeyboardMarkup([ 'keyboard' => $aEventsList, 'resize_keyboard' => true, 'one_time_keyboard' => true ]);
 
         $reply .= getMessagesBlock($storage, isAdmin($nickName));
         $telegram->sendMessage([ 'chat_id' => $chat_id, 'text' => $reply, 'reply_markup' => $reply_markup ]);
@@ -121,6 +127,33 @@ if($text){
         $reply .= getMessagesBlock($storage, isAdmin($nickName));
         $telegram->sendMessage([ 'chat_id' => $chat_id, 'text' => $reply, 'reply_markup' => $reply_markup ]);
 
+    } else if (preg_match('/^Событие\s+(создать|удалить)\s+(.+)$/ui', $text, $regs)) {
+        $reply = 'Недостаточно прав' . PHP_EOL;
+        if (isAdmin($nickName) == true) {
+            $eventAction = strtolower($regs[1]);
+            $eventName   = trim($regs[2]);
+            if ($eventAction == 'создать') {
+                $storage->eventAdd([
+                    'name' => $eventName,
+                    'start' => '15.12.2019 11:00',
+                    'end' => '15.12.2019 13:00',
+                    'admin' => ['MorKwa', 'Lebed'],
+                ]);
+                $reply = 'Событие ' . $eventName . ' добавлено';
+            } elseif ($eventAction == 'удалить') {
+                try {
+                    $storage->eventDelete($eventName);
+                    $reply = 'Событие ' . $eventName . ' удалено';
+                } catch (Exception $ex) {
+                    $reply = 'Событие не удалено. ' . $ex->getMessage();
+                }
+            }
+        } else {
+            $reply = 'Действие доступно только для администраторов';
+        }
+
+        $reply .= getMessagesBlock($storage, isAdmin($nickName));
+        $telegram->sendMessage([ 'chat_id' => $chat_id, 'parse_mode'=> 'HTML', 'text' => $reply, 'reply_markup' => $reply_markup ]);
     } else if (preg_match('/^Сообщение\s(.+)/ui', $text, $regs)) {
         $reply = 'Недостаточно прав' . PHP_EOL;
         if (isAdmin($nickName) == true) {
@@ -167,7 +200,14 @@ if($text){
 
         $telegram->sendMessage([ 'chat_id' => $chat_id, 'text' => $reply, 'reply_markup' => $reply_markup ]);
     } else {
-        $reply = "По запросу \"<b>".$text."</b>\" ничего не найдено.";
+        $aEvents = $storage->eventList();
+        if (in_array($text, $aEvents)) {
+            $storage->userReset($nickName);
+            $storage->userRegister($text, $nickName);
+            $reply = "Вы зарегистрировались на событие \"<b>".$text."</b>\".";
+        } else {
+            $reply = "По запросу \"<b>".$text."</b>\" ничего не найдено.";
+        }
         $telegram->sendMessage([ 'chat_id' => $chat_id, 'parse_mode'=> 'HTML', 'text' => $reply ]);
     }
 }else{
@@ -229,9 +269,8 @@ function getDeltaBlock(array $aNewData, array $aOldData)
 
 function isAdmin($nickName)
 {
-    return true;
     return in_array($nickName, [
-        'nickname1', // telegram nicknames without @
-        'nickname2',
+        'testNickname', // telegram nicknames without @
     ]);
 }
+

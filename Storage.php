@@ -7,9 +7,13 @@
 class Storage
 {
     /** Файл с данными игроков */
-    protected static $messagesFile = 'messages.json';
-    /** Файл с сообщениями */
     protected static $dataFile = 'statistics.json';
+    /** Файл с сообщениями */
+    protected static $messagesFile = 'messages.json';
+    /** Файл с событиями */
+    protected static $eventsFile = 'events.json';
+    /** Файл с пользователями */
+    protected static $usersFile = 'users.json';
 
     /** папка где хранятся данные. должна быть открыта для записи! */
     protected static $dataDir = 'data/';
@@ -202,4 +206,155 @@ class Storage
         }
         file_put_contents($sFilename, json_encode($aAllData, JSON_UNESCAPED_UNICODE), LOCK_EX);
     }
+
+    /**
+     * Возвращает всю информацию о указанном событии(мероприятии)
+     */
+    public function eventGet($eventName)
+    {
+        $aData = [];
+        $sFilename = self::$dataDir . self::$eventsFile;
+        $sContents = @file_get_contents($sFilename);
+        $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
+        if (array_key_exists($eventName, $aAllData)) {
+            $aData = $aAllData[$eventName];
+        }
+        return $aData;
+    }
+
+    /**
+     * Возвращает список известных событий(мероприятий)
+     * @return array
+     */
+    public function eventList()
+    {
+        $sFilename = self::$dataDir . self::$eventsFile;
+        $sContents = @file_get_contents($sFilename);
+        $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
+        return array_keys($aAllData);
+    }
+
+    /**
+     * Удаляет указанное событие(мероприятие)
+     */
+    public function eventDelete($eventName)
+    {
+        $sFilename = self::$dataDir . self::$eventsFile;
+        $sContents = @file_get_contents($sFilename);
+        $aEvents = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
+        if (!array_key_exists($eventName, $aEvents)) {
+            throw new Exception('Событие не найдено');
+        }
+        unset ($aEvents[$eventName]);
+        file_put_contents($sFilename, json_encode($aEvents, JSON_UNESCAPED_UNICODE), LOCK_EX);
+    }
+
+    /**
+     * Добавляет, создаёт новое событие(мероприятие)
+     */
+    public function eventAdd(array $aEventData)
+    {
+        if (!array_key_exists('name', $aEventData)) {
+            throw new Exception('Ошибка. Нет имени у события');
+        }
+        $eventName = $aEventData['name'];
+        $aEventData = [
+            'date' => date('d.m.Y'),
+            'time' => date('H:i:s'),
+            'author' => $this->username,
+            'data' => $aEventData,
+        ];
+        $sFilename = self::$dataDir . self::$eventsFile;
+        $sContents = @file_get_contents($sFilename);
+        $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
+        $aAllData[$eventName] = $aEventData;
+        file_put_contents($sFilename, json_encode($aAllData, JSON_UNESCAPED_UNICODE), LOCK_EX);
+    }
+
+    /**
+     * Регистрирует пользователя на указанное событие(мероприятие)
+     */
+    public function userRegister($eventName, $userName)
+    {
+        $sFilename = self::$dataDir . self::$usersFile;
+        $sContents = @file_get_contents($sFilename);
+        $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
+        if (array_key_exists($eventName, $aAllData)) {
+            $aData = (array) $aAllData[$eventName];
+            $aData[] = $userName;
+        } else {
+            $aData = [$userName];
+        }
+        $aAllData[$eventName] = $aData;
+        file_put_contents($sFilename, json_encode($aAllData, JSON_UNESCAPED_UNICODE), LOCK_EX);
+    }
+
+    /**
+     * Отменяет регистрацию пользователя на указанное событие(мероприятие) (и только там)
+     */
+    public function userUnregister($eventName, $userName)
+    {
+        $sFilename = self::$dataDir . self::$usersFile;
+        $sContents = @file_get_contents($sFilename);
+        $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
+        if (array_key_exists($eventName, $aAllData)) {
+            $aData = (array) $aAllData[$eventName];
+            if (($key = array_search($userName, $aData)) !== false){
+                unset ($aData[$key]);
+            }
+            $aAllData[$eventName] = $aData;
+        }
+        file_put_contents($sFilename, json_encode($aAllData, JSON_UNESCAPED_UNICODE), LOCK_EX);
+    }
+
+    /**
+     * Возвращает название первого найденного события(мероприятие) на которое зарегистрирован пользователь
+     */
+    public function userGetRegistration($userName)
+    {
+        $sFilename = self::$dataDir . self::$usersFile;
+        $sContents = @file_get_contents($sFilename);
+        $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
+        foreach ($aAllData as $eventName => $aEventUsers) {
+            if (($key = array_search($userName, $aEventUsers)) !== false){
+                return $eventName;
+            }
+        }
+        return '';
+    }
+
+    /**
+     * Удалить указанного пользователя отовсюду
+     * (отменяет ренистрацию на все события(мероприятия))
+     */
+    public function userReset($userName)
+    {
+        $sFilename = self::$dataDir . self::$usersFile;
+        $sContents = @file_get_contents($sFilename);
+        $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
+        foreach ($aAllData as $aEventUsers) {
+            if (($key = array_search($userName, $aEventUsers)) !== false){
+                unset ($aEventUsers[$key]);
+            }
+        }
+        file_put_contents($sFilename, json_encode($aAllData, JSON_UNESCAPED_UNICODE), LOCK_EX);
+    }
+
+    /**
+     * транслит с минусом всесто пробелов
+     * предполагается использовать для создания имён файлов с результатами событий
+     */
+    protected function translit($str) {
+        $str = (string) $str; // преобразуем в строковое значение
+        $str = strip_tags($str); // убираем HTML-теги
+        $str = str_replace(array("\n", "\r"), " ", $str); // убираем перевод каретки
+        $str = trim($str); // убираем пробелы в начале и конце строки
+        $str = function_exists('mb_strtolower') ? mb_strtolower($str) : strtolower($str); // переводим строку в нижний регистр (иногда надо задать локаль)
+        $str = strtr($str, array('а'=>'a','б'=>'b','в'=>'v','г'=>'g','д'=>'d','е'=>'e','ё'=>'e','ж'=>'j','з'=>'z','и'=>'i','й'=>'y','к'=>'k','л'=>'l','м'=>'m','н'=>'n','о'=>'o','п'=>'p','р'=>'r','с'=>'s','т'=>'t','у'=>'u','ф'=>'f','х'=>'h','ц'=>'c','ч'=>'ch','ш'=>'sh','щ'=>'shch','ы'=>'y','э'=>'e','ю'=>'yu','я'=>'ya','ъ'=>'','ь'=>''));
+        $str = preg_replace("/[^0-9a-z-_ ]/i", "", $str); // очищаем строку от недопустимых символов
+        $str = preg_replace("/\s+/", ' ', $str); // удаляем повторяющие пробелы
+        $str = str_replace(" ", "-", $str); // заменяем пробелы знаком минус
+        return $str; // возвращаем результат
+    }
+
 }

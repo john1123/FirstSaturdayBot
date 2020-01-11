@@ -55,6 +55,7 @@ class IngressProfile
         'Prime Challenges',
         'Intel Ops Missions',
         'Stealth Ops Missions',
+        'Umbra: Unique Resonator Slots Deployed',
         'Recursions',
     ];
     //

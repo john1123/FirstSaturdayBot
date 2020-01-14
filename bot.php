@@ -24,7 +24,6 @@ $result = $telegram -> getWebhookUpdates('Начать');
 //$result = $telegram -> getWebhookUpdates('Событие создать "Simferopol FS" 01.02.2020 11:00 15:00');
 //$result = $telegram -> getWebhookUpdates('Событие удалить Simferopol FS1');
 //$result = $telegram -> getWebhookUpdates('Simferopol FS');
-//$result = $telegram -> getWebhookUpdates('Sevastopol FS');
 //$result = $telegram -> getWebhookUpdates($morkwa3);
 //$result = $telegram -> getWebhookUpdates('Сообщение Превед медвед!');
 
@@ -74,13 +73,16 @@ if (strlen($chatId) < 1) {
     die;
 }
 
+/** @var $nickName - никнейм текущего пользователя */
 $nickName = strlen($result["message"]["from"]["username"]) > 0 ? $result["message"]["from"]["username"] : '';
+/** @var $fullUser - полное имя текущего пользователя */
 $fullUser = $result["message"]["from"]["first_name"] . (strlen($nickName) > 0 ? ' (@' . $nickName . ')' : '');
 
 $keyboard = [['Состояние'],['Помощь']];
 
 $storage = new Storage($nickName);
 
+/** @var $eventString - мероприятие на которое зарегистрирован пользователь */
 $eventString = $storage->userGetRegistration($nickName);
 if (strlen($eventString) > 0) {
     $storage->setEventName($eventString);
@@ -100,21 +102,24 @@ $reply = '';
 if($text){
     $logger->log('Текст введённый пользователем ' . $fullUser . ': ' . $text);
 
-    // НАЧАТЬ
+    // --- НАЧАТЬ ---START
     //
     if ($text == '/start' || mb_strtolower($text,'UTF-8') == "начать") {
         $reply  = 'Добро пожаловать, ' . $fullUser . PHP_EOL;
-        $reply .= 'Для учёта ваших данных, отправляйте копию вашего профиля боту (в текстовом виде).' . PHP_EOL;
+
+//        $reply .= 'Для учёта ваших данных, отправляйте копию вашего профиля боту (в текстовом виде).' . PHP_EOL;
+//        if (strlen($eventString) > 0) {
+//            $storage->deleteAgentData(false);
+//            $logger->log('Сброс данных для ' . $nickName);
+//        }
+        $reply .= '';
+        // Если где-то зарегистрированы - отменяем регистрацию
         if (strlen($eventString) > 0) {
-            $storage->deleteAgentData(false);
-            $logger->log('Сброс данных для ' . $nickName);
+            $storage->userUnregister($eventString, $nickName);
         }
 
-        $userEvent = $storage->userGetRegistration($nickName);
-        if (strlen($userEvent) < 1) {
-            $aEventsList = $storage->eventList();
-            $replyMarkup = $telegram->replyKeyboardMarkup([ 'keyboard' => $aEventsList, 'resize_keyboard' => true, 'one_time_keyboard' => true ]);
-        }
+        $aEventsList = $storage->eventList();
+        $replyMarkup = $telegram->replyKeyboardMarkup([ 'keyboard' => $aEventsList, 'resize_keyboard' => true, 'one_time_keyboard' => true ]);
 
         $reply .= getMessagesBlock($storage, isAdmin($nickName));
         $telegram->sendMessage([ 'chat_id' => $chatId, 'text' => $reply, 'reply_markup' => $replyMarkup ]);
@@ -189,7 +194,9 @@ if($text){
         }
 
         $telegram->sendMessage([ 'chat_id' => $chatId, 'text' => $reply, 'reply_markup' => $replyMarkup ]);
-    ////
+
+
+    // Создание-удаление события
     } else if (preg_match('/^Событие\s+(создать|удалить)\s+(.+)$/ui', $text, $regs)) {
         $reply = 'Недостаточно прав' . PHP_EOL;
         if (isAdmin($nickName) == true) {
@@ -257,7 +264,7 @@ if($text){
         }
         $telegram->sendMessage(['chat_id' => $chatId, 'text' => $reply, 'reply_markup' => $replyMarkup]);
 
-    //
+    // Регистрация на событие
     } else {
 
         // Если передано имя события - регистрируем пользователя на него

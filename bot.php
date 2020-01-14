@@ -113,14 +113,10 @@ if($text){
     // --- НАЧАТЬ ---START
     //
     if ($text == '/start' || mb_strtolower($text,'UTF-8') == "начать") {
-        $reply  = 'Добро пожаловать, ' . $fullUser . PHP_EOL;
+        $reply  .= 'Добро пожаловать, ' . $fullUser . PHP_EOL;
+        $reply .= 'Вам необходимо зарегистрироваться на одно из предстоящих событий. ';
+        $reply .= 'Пожалуйста, выберите событие нажав на соответствующую кнопку.';
 
-//        $reply .= 'Для учёта ваших данных, отправляйте копию вашего профиля боту (в текстовом виде).' . PHP_EOL;
-//        if (strlen($eventString) > 0) {
-//            $storage->deleteAgentData(false);
-//            $logger->log('Сброс данных для ' . $nickName);
-//        }
-        $reply .= '';
         // Если где-то зарегистрированы - отменяем регистрацию
         if (strlen($eventString) > 0) {
             $storage->userUnregister($eventString, $nickName);

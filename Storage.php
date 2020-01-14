@@ -18,6 +18,7 @@ class Storage
     /** папка где хранятся данные. должна быть открыта для записи! */
     protected static $dataDir = 'data/';
 
+    protected $evenName = '';
     protected $username;
 
     public function __construct($username)
@@ -25,14 +26,20 @@ class Storage
         $this->username = $username;
     }
 
+    public function setEventName($name)
+    {
+        $this->evenName = $name;
+    }
+
+
 
     /**
      * Получить все сообщения в виде массива
      */
     public function getMessages($fullData=false)
     {
-        $sFilename = self::$dataDir . self::$messagesFile;
-        $sContents = @file_get_contents($sFilename);
+        $sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$messagesFile;
+        $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aMessages = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
 
         $aText = [];
@@ -61,8 +68,9 @@ class Storage
      */
     public function setMessage($sMessage, $type='text')
     {
-        $sFilename = self::$dataDir . self::$messagesFile;
-        $sContents = @file_get_contents($sFilename);
+        //$sFilename = self::$dataDir . self::$messagesFile;
+        $sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$messagesFile;
+        $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aMessages = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         $iId = 0;
         if (count($aMessages) > 0) {
@@ -80,7 +88,7 @@ class Storage
             'text'   => $sMessage,
             'type'   => $type,
         ];
-        file_put_contents($sFilename, json_encode($aMessages, JSON_UNESCAPED_UNICODE), LOCK_EX);
+        file_put_contents($sFilename, json_encode($aMessages, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
     }
 
     /**
@@ -91,11 +99,11 @@ class Storage
      */
     public function deleteMessage($msgId)
     {
-        $sFilename = self::$dataDir . self::$messagesFile;
-        $sContents = @file_get_contents($sFilename);
+        $sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$messagesFile;
+        $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aMessages = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         unset ($aMessages[$msgId]);
-        file_put_contents($sFilename, json_encode($aMessages, JSON_UNESCAPED_UNICODE), LOCK_EX);
+        file_put_contents($sFilename, json_encode($aMessages, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
     }
 
     /**
@@ -118,20 +126,11 @@ class Storage
      */
     public function clearData()
     {
-        if (file_exists(self::$dataDir . self::$dataFile)) {
-            rename(self::$dataDir . self::$dataFile, self::$dataDir . 'statistics_' . date('Ymd_his') . '.json');
-        }
-    }
+        $sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$dataFile;
 
-    public static function getAllData()
-    {
-        $aAllData = [];
-        $sFilename = self::$dataDir . self::$dataFile;
         if (file_exists($sFilename)) {
-            $sContents = @file_get_contents($sFilename);
-            $aAllData = strlen($sContents) > 0 ? (array)json_decode($sContents, true) : [];
+            rename($sFilename, $sFilename . '_backup' . date('Ymd_his') . '.json');
         }
-        return $aAllData;
     }
 
     /**
@@ -143,8 +142,8 @@ class Storage
     public function getAgentData($recordId=0)
     {
         $aAgentData = [];
-        $sFilename = self::$dataDir . self::$dataFile;
-        $sContents = @file_get_contents($sFilename);
+        $sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$dataFile;
+        $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         if (count($aAllData) > 0) {
             $aStoredAgentData = array_key_exists($this->username, $aAllData) ? $aAllData[$this->username] : [];
@@ -169,8 +168,8 @@ class Storage
             'time' => date('H:i:s'), // $aAgentData['Time (hh:mm:ss)'],
             'data' => $aAgentData,
         ];
-        $sFilename = self::$dataDir . self::$dataFile;
-        $sContents = @file_get_contents($sFilename);
+        $sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$dataFile;
+        $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         $aStoredAgentData = array_key_exists($this->username, $aAllData) ? $aAllData[$this->username] : [];
         if (count($aStoredAgentData) > 0) { // Если что-то есть
@@ -179,7 +178,7 @@ class Storage
             $aStoredAgentData[0] = $aAgentData;
         }
         $aAllData[$this->username] = $aStoredAgentData;
-        file_put_contents($sFilename, json_encode($aAllData, JSON_UNESCAPED_UNICODE), LOCK_EX);
+        file_put_contents($sFilename, json_encode($aAllData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
     }
 
     /**
@@ -190,8 +189,8 @@ class Storage
      */
     public function deleteAgentData($bLastOnly=true)
     {
-        $sFilename = self::$dataDir . self::$dataFile;
-        $sContents = @file_get_contents($sFilename);
+        $sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$dataFile;
+        $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         if ($bLastOnly) {
             $aStoredAgentData = array_key_exists($this->username, $aAllData) ? $aAllData[$this->username] : [];
@@ -204,7 +203,9 @@ class Storage
                 unset ($aAllData[$this->username]);
             }
         }
-        file_put_contents($sFilename, json_encode($aAllData, JSON_UNESCAPED_UNICODE), LOCK_EX);
+        if (count($aAllData) > 0) {
+            file_put_contents($sFilename, json_encode($aAllData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+        }
     }
 
     /**
@@ -214,7 +215,7 @@ class Storage
     {
         $aData = [];
         $sFilename = self::$dataDir . self::$eventsFile;
-        $sContents = @file_get_contents($sFilename);
+        $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         if (array_key_exists($eventName, $aAllData)) {
             $aData = $aAllData[$eventName];
@@ -226,12 +227,12 @@ class Storage
      * Возвращает список известных событий(мероприятий)
      * @return array
      */
-    public function eventList()
+    public function eventList($fullData=false)
     {
         $sFilename = self::$dataDir . self::$eventsFile;
-        $sContents = @file_get_contents($sFilename);
+        $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
-        return array_keys($aAllData);
+        return $fullData ? $aAllData : array_keys($aAllData);
     }
 
     /**
@@ -240,13 +241,13 @@ class Storage
     public function eventDelete($eventName)
     {
         $sFilename = self::$dataDir . self::$eventsFile;
-        $sContents = @file_get_contents($sFilename);
+        $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aEvents = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         if (!array_key_exists($eventName, $aEvents)) {
             throw new Exception('Событие не найдено');
         }
         unset ($aEvents[$eventName]);
-        file_put_contents($sFilename, json_encode($aEvents, JSON_UNESCAPED_UNICODE), LOCK_EX);
+        file_put_contents($sFilename, json_encode($aEvents, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
     }
 
     /**
@@ -265,58 +266,56 @@ class Storage
             'data' => $aEventData,
         ];
         $sFilename = self::$dataDir . self::$eventsFile;
-        $sContents = @file_get_contents($sFilename);
+        $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         $aAllData[$eventName] = $aEventData;
-        file_put_contents($sFilename, json_encode($aAllData, JSON_UNESCAPED_UNICODE), LOCK_EX);
+        file_put_contents($sFilename, json_encode($aAllData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
     }
 
     /**
      * Регистрирует пользователя на указанное событие(мероприятие)
      */
-    public function userRegister($eventName, $userName)
+    public function userRegister($eventName, $userName, $aUserData)
     {
         $sFilename = self::$dataDir . self::$usersFile;
-        $sContents = @file_get_contents($sFilename);
+        $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
-        if (array_key_exists($eventName, $aAllData)) {
-            $aData = (array) $aAllData[$eventName];
-            $aData[] = $userName;
-        } else {
-            $aData = [$userName];
-        }
-        $aAllData[$eventName] = $aData;
-        file_put_contents($sFilename, json_encode($aAllData, JSON_UNESCAPED_UNICODE), LOCK_EX);
+
+        $aUserData['date'] = date('d.m.Y');
+        $aUserData['time'] = date('H:i:s');
+
+        $aAllData[$eventName][$userName] = $aUserData;
+        file_put_contents($sFilename, json_encode($aAllData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
     }
 
     /**
-     * Отменяет регистрацию пользователя на указанное событие(мероприятие) (и только там)
+     * Отменяет регистрацию пользователя на указанное событие(мероприятие) (и только на нём)
      */
     public function userUnregister($eventName, $userName)
     {
         $sFilename = self::$dataDir . self::$usersFile;
-        $sContents = @file_get_contents($sFilename);
+        $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
-        if (array_key_exists($eventName, $aAllData)) {
-            $aData = (array) $aAllData[$eventName];
-            if (($key = array_search($userName, $aData)) !== false){
-                unset ($aData[$key]);
-            }
-            $aAllData[$eventName] = $aData;
+        if (array_key_exists($eventName, $aAllData) && array_key_exists($userName, $aAllData[$eventName])) {
+            unset ($aAllData[$eventName][$userName]);
+            file_put_contents($sFilename, json_encode($aAllData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
         }
-        file_put_contents($sFilename, json_encode($aAllData, JSON_UNESCAPED_UNICODE), LOCK_EX);
     }
 
     /**
      * Возвращает название первого найденного события(мероприятие) на которое зарегистрирован пользователь
+     * Если также указано и название события, возвращает данные регистрации этого пользователя на событии
      */
-    public function userGetRegistration($userName)
+    public function userGetRegistration($userName, $eventName='')
     {
         $sFilename = self::$dataDir . self::$usersFile;
-        $sContents = @file_get_contents($sFilename);
+        $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
+        if (strlen($eventName) > 0 && array_key_exists($eventName, $aAllData) && array_key_exists($userName, $aAllData[$eventName])) {
+            $aAllData[$eventName][$userName];
+        }
         foreach ($aAllData as $eventName => $aEventUsers) {
-            if (($key = array_search($userName, $aEventUsers)) !== false){
+            if (array_key_exists($userName, $aEventUsers)) {
                 return $eventName;
             }
         }
@@ -325,19 +324,32 @@ class Storage
 
     /**
      * Удалить указанного пользователя отовсюду
-     * (отменяет ренистрацию на все события(мероприятия))
+     * (отменяет регистрацию на все события(мероприятия))
      */
     public function userReset($userName)
     {
         $sFilename = self::$dataDir . self::$usersFile;
-        $sContents = @file_get_contents($sFilename);
+        $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
-        foreach ($aAllData as $aEventUsers) {
-            if (($key = array_search($userName, $aEventUsers)) !== false){
-                unset ($aEventUsers[$key]);
-            }
+
+        foreach ($aAllData as $eventName => $aEventUsers) {
+            unset($aAllData[$eventName][$userName]);
         }
-        file_put_contents($sFilename, json_encode($aAllData, JSON_UNESCAPED_UNICODE), LOCK_EX);
+        file_put_contents($sFilename, json_encode($aAllData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+    }
+
+    public function userList($eventName='')
+    {
+        $aUserList = [];
+        $sFilename = self::$dataDir . self::$usersFile;
+        $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
+        $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
+
+        $eventName = strlen($eventName) > 0 ? $eventName : $this->evenName;
+        if (array_key_exists($eventName, $aAllData)) {
+            $aUserList = $aAllData[$eventName];
+        }
+        return $aUserList;
     }
 
     /**

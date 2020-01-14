@@ -1,7 +1,7 @@
 <?php
 
-/** Токен, поучаенный у @BotFather */
-define('TELEGRAM_BOT_TOKEN', '!!!Укажите ваш токен здесь!!!!!');
+/** Токен, полученный у @BotFather */
+define('TELEGRAM_BOT_TOKEN', '792434518:AAFilIOmSe0FiH2lIW3ieWLSKnY0Tz4epTo');
 /** Имя файла бота */
 define('FILENAME_BOT', 'bot.php');
 /** Имя файла для генерации xls-таблицы */
@@ -20,14 +20,58 @@ $logger = new Logger('./data/bot_' . date('Ymd') . '.log');
 
 $telegram = new Api(TELEGRAM_BOT_TOKEN);
 //$result = $telegram -> getWebhookUpdates();
-//$result = $telegram -> getWebhookUpdates('Событие создать Simferopol FS');
-//$result = $telegram -> getWebhookUpdates('Событие удалить Simferopol FS1');
 $result = $telegram -> getWebhookUpdates('Начать');
+//$result = $telegram -> getWebhookUpdates('Событие создать "Simferopol FS" 01.02.2020 11:00 15:00');
+//$result = $telegram -> getWebhookUpdates('Событие удалить Simferopol FS1');
+//$result = $telegram -> getWebhookUpdates('Simferopol FS');
+//$result = $telegram -> getWebhookUpdates('Sevastopol FS');
+//$result = $telegram -> getWebhookUpdates($morkwa3);
+//$result = $telegram -> getWebhookUpdates('Сообщение Превед медвед!');
 
-$text = $result["message"]["text"];
-$chat_id = $result["message"]["chat"]["id"];
-if (strlen($chat_id) < 1) {
-    die('Ошибка. Скрипт нельзя вызывать непосредственно из браузера! Установите вебхук вызвав https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<адрес и путь к скрипту>/bot.php');
+$text = @$result["message"]["text"];
+$chatId = @$result["message"]["chat"]["id"];
+if (strlen($chatId) < 1) {
+    //die('Ошибка. Скрипт нельзя вызывать непосредственно из браузера! Установите вебхук вызвав https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<адрес и путь к скрипту>/bot.php');
+    // Дёргать оповещения
+    $storage = new Storage('');
+    $aEventsList = $storage->eventList(true);
+    foreach ($aEventsList as $eventString => $aEventData) {
+        $now = time();
+        $aEventAdmins = $aEventData['data']['admin'];
+        $eventStart = strtotime($aEventData['data']['start']);
+        $eventEnd = strtotime($aEventData['data']['end']);
+        if ($now <= $eventEnd && $now >= $eventStart) {
+            $logger->log('Текущее событие: ' . $eventString);
+            $storage->setEventName($eventString);
+            $aMessages = $storage->getMessages(true);
+            $aUsers = $storage->userList();
+            if (count($aMessages) > 0 && count($aUsers) > 0) {
+
+                foreach ($aMessages as $msgId => $aMsgData) {
+                    $author = $aMsgData['author'];
+                    $msgText = $aMsgData['text'];
+
+                    foreach ($aUsers as $nickName => $aUserData) {
+                        $firstName = $aUserData['firstName'];
+                        $chatId = $aUserData['chatId'];
+
+                        $msg = '';
+                        if (in_array($author, $aEventAdmins)) {
+                            $msg .= '<b>Внимание!</b> '; // Сообщение от админа
+                        } else {
+                            $msg .= '@' . $author . ': ';
+                        }
+                        $msg .= $msgText;
+                        $telegram->sendMessage([ 'chat_id' => $chatId, 'parse_mode'=> 'HTML', 'text' => $msg ]);
+                        $logger->log('Сообщение: ' . $msg);
+                    }
+                    $storage->deleteMessage($msgId);
+                }
+            }
+            $a = 2;
+        }
+    }
+    die;
 }
 
 $nickName = strlen($result["message"]["from"]["username"]) > 0 ? $result["message"]["from"]["username"] : '';
@@ -36,83 +80,63 @@ $fullUser = $result["message"]["from"]["first_name"] . (strlen($nickName) > 0 ? 
 $keyboard = [['Состояние'],['Помощь']];
 
 $storage = new Storage($nickName);
+
+$eventString = $storage->userGetRegistration($nickName);
+if (strlen($eventString) > 0) {
+    $storage->setEventName($eventString);
+}
 $aFirstRecord = $storage->getAgentData(0);
 if (count($aFirstRecord) < 1) {
     array_unshift($keyboard, ['Начать']);
 }
+// Добавляем команды админу
 if (isAdmin($nickName)) {
     array_unshift($keyboard, ['Результаты']);
     array_unshift($keyboard, ['Участники']);
 }
-$reply_markup = $telegram->replyKeyboardMarkup([ 'keyboard' => $keyboard, 'resize_keyboard' => true, 'one_time_keyboard' => false ]);
+$replyMarkup = $telegram->replyKeyboardMarkup([ 'keyboard' => $keyboard, 'resize_keyboard' => true, 'one_time_keyboard' => false ]);
 
 $reply = '';
 if($text){
     $logger->log('Текст введённый пользователем ' . $fullUser . ': ' . $text);
+
+    // НАЧАТЬ
+    //
     if ($text == '/start' || mb_strtolower($text,'UTF-8') == "начать") {
         $reply  = 'Добро пожаловать, ' . $fullUser . PHP_EOL;
         $reply .= 'Для учёта ваших данных, отправляйте копию вашего профиля боту (в текстовом виде).' . PHP_EOL;
-        $storage->deleteAgentData(false);
-        $logger->log('Сброс данных для ' . $nickName);
-        $aEventsList = $storage->eventGet();
-        $reply_markup = $telegram->replyKeyboardMarkup([ 'keyboard' => $aEventsList, 'resize_keyboard' => true, 'one_time_keyboard' => true ]);
+        if (strlen($eventString) > 0) {
+            $storage->deleteAgentData(false);
+            $logger->log('Сброс данных для ' . $nickName);
+        }
+
+        $userEvent = $storage->userGetRegistration($nickName);
+        if (strlen($userEvent) < 1) {
+            $aEventsList = $storage->eventList();
+            $replyMarkup = $telegram->replyKeyboardMarkup([ 'keyboard' => $aEventsList, 'resize_keyboard' => true, 'one_time_keyboard' => true ]);
+        }
 
         $reply .= getMessagesBlock($storage, isAdmin($nickName));
-        $telegram->sendMessage([ 'chat_id' => $chat_id, 'text' => $reply, 'reply_markup' => $reply_markup ]);
+        $telegram->sendMessage([ 'chat_id' => $chatId, 'text' => $reply, 'reply_markup' => $replyMarkup ]);
 
-    } else if (mb_strtolower($text,'UTF-8') == "участники") {
-        $aAllData = Storage::getAllData();
-        $reply .= 'Список участников:' . PHP_EOL;
-        if (count($aAllData) > 0) {
-            foreach ($aAllData as $username => $aData) {
-                $reply .= ' - ';
-                $sData = $aData[0]['data']['Agent Faction'] == 'Resistance' ? 'R' : 'E';
-                $sData .= $aData[0]['data']['Level'];
-                $reply .= $aData[0]['data']['Agent Name'] . '(' . $sData . '), @' . $username . ' (' . count($aData) . ')';
-                $reply .= PHP_EOL;
-            }
-        } else {
-            $reply .= ' - список пуст' . PHP_EOL;
-        }
-        $reply .= getMessagesBlock($storage, isAdmin($nickName));
-        $telegram->sendMessage([ 'chat_id' => $chat_id, 'text' => $reply, 'reply_markup' => $reply_markup ]);
-    } else if (mb_strtolower($text,'UTF-8') == "результаты") {
-        if (isAdmin($nickName) == true) {
-            $response = $telegram->sendDocument([
-                'chat_id' => $chat_id,
-                // result.xls в конце строки добавлен для того, чтобы телеграм видел в конце строки файл эксель.
-                // Вроде как без этого не заработает (не уверен)
-                'document' => 'https://'.$_SERVER['SERVER_NAME']. str_replace('bot.php', 'result.php', $_SERVER['SCRIPT_NAME']) . '/result.xls',
-                'caption' => 'Файл с результатами',
-            ]);
-        } else {
-            $reply = 'Недостаточно прав' . PHP_EOL;
-            $telegram->sendMessage([ 'chat_id' => $chat_id, 'text' => $reply, 'reply_markup' => $reply_markup ]);
-        }
+    //
     } else if (mb_strtolower($text,'UTF-8') == "помощь") {
         $reply  = 'Бот предназначен для отслеживания и учёта изменений игроков Ingress. Для работы нужно в игре скопировать данные профиля в Ingress Prime и как есть отправить их боту.' . PHP_EOL;
         $reply .= 'Исходный код доступен по адресу https://github.com/john1123/FirstSaturdayBot/' . PHP_EOL;
 
         $reply .= PHP_EOL . 'Доступны следующие команды:' . PHP_EOL;
         $reply .= '<b>Начать</b> - Удалить все запомненные ранее данные (если они были) и начать всё заново. Поаккуратней с ней :)' . PHP_EOL;
-        $reply .= '<b>Состояние</b> - Посмотреть текущее состояние и свои достижения, известные боту' . PHP_EOL;
-        $reply .= '[<b>Данные профиля</b>] - Передать данные боту. Данные следует скидывать "как есть", без всяких изменений. ';
-        $reply .= 'Переданные данные запоминаются ботом и используются в дальнейшей работе' . PHP_EOL;
-        $reply .= '<b>Помощь</b> - Список доступных команд. Этот текст' . PHP_EOL;
 
         if (isAdmin($nickName)) {
             $reply .= PHP_EOL . 'Команды администратора:' . PHP_EOL;
-            $reply .= '<b>Сообщение ТЕКСТ</b> - Отправить сообщение ТЕКСТ' . PHP_EOL;
-            $reply .= '<b>Сообщение удалить ID</b> - Удалить сообщение' . PHP_EOL;
-            $reply .= '<b>Сообщения очистить</b> - Удалить все сообщения' . PHP_EOL;
-            $reply .= '<b>Данные очистить</b> - Удалить все данные. ВНИМАНИЕ. Используйте, если вы уверены. Удаляет для всех пользователей.' . PHP_EOL;
-            $reply .= '<b>Участники</b> - Все агенты, о ком известно боту' . PHP_EOL;
             $reply .= '<b>Результаты</b> - Скачать xls-файл с результатами всех игроков' . PHP_EOL;
         }
 
         $reply .= getMessagesBlock($storage, isAdmin($nickName));
 
-        $telegram->sendMessage([ 'chat_id' => $chat_id, 'parse_mode'=> 'HTML', 'text' => $reply, 'reply_markup' => $reply_markup ]);
+        $telegram->sendMessage([ 'chat_id' => $chatId, 'parse_mode'=> 'HTML', 'text' => $reply, 'reply_markup' => $replyMarkup ]);
+
+    //
     } else if (mb_strtolower($text,'UTF-8') == "состояние") {
         $reply = '';
         if (count($aFirstRecord) > 0) {
@@ -125,25 +149,79 @@ if($text){
         }
 
         $reply .= getMessagesBlock($storage, isAdmin($nickName));
-        $telegram->sendMessage([ 'chat_id' => $chat_id, 'text' => $reply, 'reply_markup' => $reply_markup ]);
+        $telegram->sendMessage([ 'chat_id' => $chatId, 'text' => $reply, 'reply_markup' => $replyMarkup ]);
 
+
+    //
+    // Данные профиля
+    } else if (preg_match('/(:?\s+\d+){25,}/', $text)) {
+
+        if (strlen($eventString) > 0) {
+            $eventData = $storage->eventGet($eventString);
+
+            $eventTimeStart = $eventData['data']['start'];
+            $eventTimeEnd = $eventData['data']['end'];
+
+            if (time() < strtotime($eventTimeStart)) {
+                $reply .= '' . $eventString . ' ещё не наступил. Мы пришлём вам уведомление, когда оно начнётся.';
+            } elseif (time() > strtotime($eventTimeEnd)) {
+                $reply .= '' . $eventString . '  уже закончился.';
+                // Отменить регистрацию пользователя?
+                // $storage->userUnregister($eventName, $nickName);
+            } else {
+                $aLastData = IngressProfile::parseProfile($text);
+                $storage->setAgentData($aLastData);
+                $aSecondRecord = $storage->getAgentData(1);
+                if (count($aSecondRecord) > 0) {
+                    $reply .= 'Данные добавлены.' . PHP_EOL;
+                    $reply .= getDeltaBlock($aLastData, $aFirstRecord['data']);
+                    $reply .= getMessagesBlock($storage, isAdmin($nickName));
+                } else {
+                    $reply .= 'Данные сохранены.' . PHP_EOL;
+                    $reply .= getMessagesBlock($storage, isAdmin($nickName));
+                }
+
+            }
+            $reply .= getMessagesBlock($storage, isAdmin($nickName));
+        } else {
+            $reply .= 'Зарегистрируйтесь на одно из событий.';
+            $reply .= getMessagesBlock($storage, isAdmin($nickName));
+        }
+
+        $telegram->sendMessage([ 'chat_id' => $chatId, 'text' => $reply, 'reply_markup' => $replyMarkup ]);
+    ////
     } else if (preg_match('/^Событие\s+(создать|удалить)\s+(.+)$/ui', $text, $regs)) {
         $reply = 'Недостаточно прав' . PHP_EOL;
         if (isAdmin($nickName) == true) {
-            $eventAction = strtolower($regs[1]);
-            $eventName   = trim($regs[2]);
+            $eventAction = mb_strtolower($regs[1]);
+            $eventString   = trim($regs[2]);
             if ($eventAction == 'создать') {
-                $storage->eventAdd([
-                    'name' => $eventName,
-                    'start' => '15.12.2019 11:00',
-                    'end' => '15.12.2019 13:00',
-                    'admin' => ['MorKwa', 'Lebed'],
-                ]);
-                $reply = 'Событие ' . $eventName . ' добавлено';
+                if (preg_match('/^(?:[\'"]([^\'"]+)[\'"]|(\w+))\s*(.+)$/m', $eventString, $regs)) {
+                    $eventName = strlen($regs[1]) > 0 ? $regs[1] : $regs[2];
+                    $aParams = explode(' ', $regs[3]);
+                    $start = $aParams[0] . ' ' . $aParams[1];
+                    $end = $aParams[0] . ' ' . $aParams[2];
+                    $aAdmins = [$nickName];
+                    for ($i=3; $i<count($aParams); $i++) {
+                        $aAdmins[] = $aParams[$i];
+                    }
+                    $storage->eventAdd([
+                        'name' => $eventName,
+                        'start' => $start,
+                        'end' => $end,
+                        'admin' => array_unique($aAdmins),
+                    ]);
+                    $reply = 'Событие "' . $eventName . '" добавлено';
+
+                } else {
+                    // неверный формат. Ожидается:
+                    // "Название мероприятия" дд.мм.гггг времяНачала времяКонца админ1 авмин2 админ3 ...
+                    $reply = 'Событие не добавлено. ' . $eventString . ' добавлено';
+                }
             } elseif ($eventAction == 'удалить') {
                 try {
-                    $storage->eventDelete($eventName);
-                    $reply = 'Событие ' . $eventName . ' удалено';
+                    $storage->eventDelete($eventString);
+                    $reply = 'Событие ' . $eventString . ' удалено';
                 } catch (Exception $ex) {
                     $reply = 'Событие не удалено. ' . $ex->getMessage();
                 }
@@ -153,7 +231,7 @@ if($text){
         }
 
         $reply .= getMessagesBlock($storage, isAdmin($nickName));
-        $telegram->sendMessage([ 'chat_id' => $chat_id, 'parse_mode'=> 'HTML', 'text' => $reply, 'reply_markup' => $reply_markup ]);
+        $telegram->sendMessage([ 'chat_id' => $chatId, 'parse_mode'=> 'HTML', 'text' => $reply, 'reply_markup' => $replyMarkup ]);
     } else if (preg_match('/^Сообщение\s(.+)/ui', $text, $regs)) {
         $reply = 'Недостаточно прав' . PHP_EOL;
         if (isAdmin($nickName) == true) {
@@ -170,49 +248,36 @@ if($text){
         }
 
         $reply .= getMessagesBlock($storage, isAdmin($nickName));
-        $telegram->sendMessage([ 'chat_id' => $chat_id, 'parse_mode'=> 'HTML', 'text' => $reply, 'reply_markup' => $reply_markup ]);
+        $telegram->sendMessage([ 'chat_id' => $chatId, 'parse_mode'=> 'HTML', 'text' => $reply, 'reply_markup' => $replyMarkup ]);
     } else if (mb_strtolower($text,'UTF-8') == "сообщения очистить") {
         $reply = 'Недостаточно прав' . PHP_EOL;
         if (isAdmin($nickName) == true) {
             $storage->clearMessages();
             $reply = 'Все сообщения удалены.';
         }
-        $telegram->sendMessage([ 'chat_id' => $chat_id, 'text' => $reply, 'reply_markup' => $reply_markup ]);
-    } else if (mb_strtolower($text,'UTF-8') == "данные очистить") {
-        $reply = 'Недостаточно прав' . PHP_EOL;
-        if (isAdmin($nickName) == true) {
-            $storage->clearData();
-            $reply = 'Все данные удалены.';
-        }
-        $telegram->sendMessage([ 'chat_id' => $chat_id, 'text' => $reply, 'reply_markup' => $reply_markup ]);
-    } else if (preg_match('/(:?\s+\d+){25,}/', $text)) {
-        $aLastData = IngressProfile::parseProfile($text);
-        $storage->setAgentData($aLastData);
-        $aSecondRecord = $storage->getAgentData(1);
-        if (count($aSecondRecord) > 0) {
-            $reply .= 'Данные добавлены.' . PHP_EOL;
-            $reply .= getDeltaBlock($aLastData, $aFirstRecord['data']);
-            $reply .= getMessagesBlock($storage, isAdmin($nickName));
-        } else {
-            $reply .= 'Данные сохранены.' . PHP_EOL;
-            $reply .= getMessagesBlock($storage, isAdmin($nickName));
-        }
+        $telegram->sendMessage(['chat_id' => $chatId, 'text' => $reply, 'reply_markup' => $replyMarkup]);
 
-        $telegram->sendMessage([ 'chat_id' => $chat_id, 'text' => $reply, 'reply_markup' => $reply_markup ]);
+    //
     } else {
+
+        // Если передано имя события - регистрируем пользователя на него
         $aEvents = $storage->eventList();
         if (in_array($text, $aEvents)) {
-            $storage->userReset($nickName);
-            $storage->userRegister($text, $nickName);
-            $reply = "Вы зарегистрировались на событие \"<b>".$text."</b>\".";
+            $storage->userReset($nickName); // Надо ли?
+            $storage->userRegister($text, $nickName, [
+                'firstName' => $result['message']['from']['first_name'],
+                'chatId' => $result['message']['chat']['id'],
+              ]);
+            $reply = "Вы успешно зарегистрировались на событие \"<b>".$text."</b>\".";
+
         } else {
             $reply = "По запросу \"<b>".$text."</b>\" ничего не найдено.";
         }
-        $telegram->sendMessage([ 'chat_id' => $chat_id, 'parse_mode'=> 'HTML', 'text' => $reply ]);
+        $telegram->sendMessage([ 'chat_id' => $chatId, 'parse_mode'=> 'HTML', 'text' => $reply ]);
     }
-}else{
+} else {
     $reply = "Отправьте текстовое сообщение.";
-    $telegram->sendMessage([ 'chat_id' => $chat_id, 'text' => $reply, 'reply_markup' => $reply_markup ]);
+    $telegram->sendMessage([ 'chat_id' => $chatId, 'text' => $reply, 'reply_markup' => $replyMarkup ]);
 }
 $logger->log('Ответ бота: ' . $reply);
 
@@ -273,4 +338,3 @@ function isAdmin($nickName)
         'testNickname', // telegram nicknames without @
     ]);
 }
-

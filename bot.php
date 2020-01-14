@@ -61,7 +61,16 @@ if (strlen($chatId) < 1) {
                             $msg .= '@' . $author . ': ';
                         }
                         $msg .= $msgText;
-                        $telegram->sendMessage([ 'chat_id' => $chatId, 'parse_mode'=> 'HTML', 'text' => $msg ]);
+                        $telegram->sendMessage([
+                            'chat_id' => $chatId,
+                            'text' => $msg,
+                            'parse_mode'=> 'HTML',
+                            'reply_markup' => $telegram->replyKeyboardMarkup([
+                                'keyboard' => $aKeyboard,
+                                'resize_keyboard' => true,
+                                'one_time_keyboard' => false,
+                            ])
+                        ]);
                         $logger->log('Сообщение: ' . $msg);
                     }
                     $storage->deleteMessage($msgId);
@@ -78,7 +87,7 @@ $nickName = strlen($result["message"]["from"]["username"]) > 0 ? $result["messag
 /** @var $fullUser - полное имя текущего пользователя */
 $fullUser = $result["message"]["from"]["first_name"] . (strlen($nickName) > 0 ? ' (@' . $nickName . ')' : '');
 
-$keyboard = [['Состояние'],['Помощь']];
+$aKeyboard = [['Состояние'],['Помощь']];
 
 $storage = new Storage($nickName);
 
@@ -89,14 +98,13 @@ if (strlen($eventString) > 0) {
 }
 $aFirstRecord = $storage->getAgentData(0);
 if (count($aFirstRecord) < 1) {
-    array_unshift($keyboard, ['Начать']);
+    array_unshift($aKeyboard, ['Начать']);
 }
 // Добавляем команды админу
 if (isAdmin($nickName)) {
-    array_unshift($keyboard, ['Результаты']);
-    array_unshift($keyboard, ['Участники']);
+    array_unshift($aKeyboard, ['Результаты']);
+    array_unshift($aKeyboard, ['Участники']);
 }
-$replyMarkup = $telegram->replyKeyboardMarkup([ 'keyboard' => $keyboard, 'resize_keyboard' => true, 'one_time_keyboard' => false ]);
 
 $reply = '';
 if($text){
@@ -118,11 +126,16 @@ if($text){
             $storage->userUnregister($eventString, $nickName);
         }
 
-        $aEventsList = $storage->eventList();
-        $replyMarkup = $telegram->replyKeyboardMarkup([ 'keyboard' => $aEventsList, 'resize_keyboard' => true, 'one_time_keyboard' => true ]);
-
         $reply .= getMessagesBlock($storage, isAdmin($nickName));
-        $telegram->sendMessage([ 'chat_id' => $chatId, 'text' => $reply, 'reply_markup' => $replyMarkup ]);
+        $telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => $reply,
+            'reply_markup' => $telegram->replyKeyboardMarkup([
+                'keyboard' => $storage->eventList(),
+                'resize_keyboard' => true,
+                'one_time_keyboard' => false,
+            ])
+        ]);
 
     //
     } else if (mb_strtolower($text,'UTF-8') == "помощь") {
@@ -139,7 +152,16 @@ if($text){
 
         $reply .= getMessagesBlock($storage, isAdmin($nickName));
 
-        $telegram->sendMessage([ 'chat_id' => $chatId, 'parse_mode'=> 'HTML', 'text' => $reply, 'reply_markup' => $replyMarkup ]);
+        $telegram->sendMessage([
+            'chat_id' => $chatId,
+            'parse_mode'=> 'HTML',
+            'text' => $reply,
+            'reply_markup' => $telegram->replyKeyboardMarkup([
+                'keyboard' => $aKeyboard,
+                'resize_keyboard' => true,
+                'one_time_keyboard' => false,
+            ])
+        ]);
 
     //
     } else if (mb_strtolower($text,'UTF-8') == "состояние") {
@@ -154,7 +176,15 @@ if($text){
         }
 
         $reply .= getMessagesBlock($storage, isAdmin($nickName));
-        $telegram->sendMessage([ 'chat_id' => $chatId, 'text' => $reply, 'reply_markup' => $replyMarkup ]);
+        $telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => $reply,
+            'reply_markup' => $telegram->replyKeyboardMarkup([
+                'keyboard' => $aKeyboard,
+                'resize_keyboard' => true,
+                'one_time_keyboard' => false,
+            ])
+        ]);
 
 
     //
@@ -193,7 +223,16 @@ if($text){
             $reply .= getMessagesBlock($storage, isAdmin($nickName));
         }
 
-        $telegram->sendMessage([ 'chat_id' => $chatId, 'text' => $reply, 'reply_markup' => $replyMarkup ]);
+        $telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => $reply,
+            //'parse_mode'=> 'HTML',
+            'reply_markup' => $telegram->replyKeyboardMarkup([
+                'keyboard' => $aKeyboard,
+                'resize_keyboard' => true,
+                'one_time_keyboard' => false,
+            ])
+        ]);
 
 
     // Создание-удаление события
@@ -238,7 +277,16 @@ if($text){
         }
 
         $reply .= getMessagesBlock($storage, isAdmin($nickName));
-        $telegram->sendMessage([ 'chat_id' => $chatId, 'parse_mode'=> 'HTML', 'text' => $reply, 'reply_markup' => $replyMarkup ]);
+        $telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => $reply,
+            'parse_mode'=> 'HTML',
+            'reply_markup' => $telegram->replyKeyboardMarkup([
+                'keyboard' => $aKeyboard,
+                'resize_keyboard' => true,
+                'one_time_keyboard' => false,
+            ])
+        ]);
     } else if (preg_match('/^Сообщение\s(.+)/ui', $text, $regs)) {
         $reply = 'Недостаточно прав' . PHP_EOL;
         if (isAdmin($nickName) == true) {
@@ -255,14 +303,32 @@ if($text){
         }
 
         $reply .= getMessagesBlock($storage, isAdmin($nickName));
-        $telegram->sendMessage([ 'chat_id' => $chatId, 'parse_mode'=> 'HTML', 'text' => $reply, 'reply_markup' => $replyMarkup ]);
+        $telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => $reply,
+            'parse_mode'=> 'HTML',
+            'reply_markup' => $telegram->replyKeyboardMarkup([
+                'keyboard' => $aKeyboard,
+                'resize_keyboard' => true,
+                'one_time_keyboard' => false,
+            ])
+        ]);
     } else if (mb_strtolower($text,'UTF-8') == "сообщения очистить") {
         $reply = 'Недостаточно прав' . PHP_EOL;
         if (isAdmin($nickName) == true) {
             $storage->clearMessages();
             $reply = 'Все сообщения удалены.';
         }
-        $telegram->sendMessage(['chat_id' => $chatId, 'text' => $reply, 'reply_markup' => $replyMarkup]);
+        $telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => $reply,
+            //'parse_mode'=> 'HTML',
+            'reply_markup' => $telegram->replyKeyboardMarkup([
+                'keyboard' => $aKeyboard,
+                'resize_keyboard' => true,
+                'one_time_keyboard' => false,
+            ])
+        ]);
 
     // Регистрация на событие
     } else {
@@ -280,11 +346,29 @@ if($text){
         } else {
             $reply = "По запросу \"<b>".$text."</b>\" ничего не найдено.";
         }
-        $telegram->sendMessage([ 'chat_id' => $chatId, 'parse_mode'=> 'HTML', 'text' => $reply ]);
+        $telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => $reply,
+            'parse_mode'=> 'HTML',
+            'reply_markup' => $telegram->replyKeyboardMarkup([
+                'keyboard' => $aKeyboard,
+                'resize_keyboard' => true,
+                'one_time_keyboard' => false,
+            ])
+        ]);
     }
 } else {
     $reply = "Отправьте текстовое сообщение.";
-    $telegram->sendMessage([ 'chat_id' => $chatId, 'text' => $reply, 'reply_markup' => $replyMarkup ]);
+    $telegram->sendMessage([
+        'chat_id' => $chatId,
+        'text' => $reply,
+        //'parse_mode'=> 'HTML',
+        'reply_markup' => $telegram->replyKeyboardMarkup([
+            'keyboard' => $aKeyboard,
+            'resize_keyboard' => true,
+            'one_time_keyboard' => false,
+        ])
+    ]);
 }
 $logger->log('Ответ бота: ' . $reply);
 

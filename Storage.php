@@ -273,6 +273,21 @@ class Storage
     }
 
     /**
+     * Возвращает - администратор ли указанный пользователь на указанном событии
+     */
+    public function isAdmin($eventname, $nickname='')
+    {
+        $sFilename = self::$dataDir . self::$eventsFile;
+        $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
+        $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
+        if (array_key_exists($eventname, $aAllData)) {
+            $aAdmins = $aAllData[$eventname]['data']['admin'];
+            return in_array($nickname, $aAdmins);
+        }
+        return false;
+    }
+
+    /**
      * Регистрирует пользователя на указанное событие(мероприятие)
      */
     public function userRegister($eventName, $userName, $aUserData)

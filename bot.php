@@ -20,7 +20,8 @@ $logger = new Logger('./data/bot_' . date('Ymd') . '.log');
 
 $telegram = new Api(TELEGRAM_BOT_TOKEN);
 //$result = $telegram -> getWebhookUpdates();
-$result = $telegram -> getWebhookUpdates('Начать');
+//$result = $telegram -> getWebhookUpdates('Начать');
+$result = $telegram -> getWebhookUpdates('Состояние');
 //$result = $telegram -> getWebhookUpdates('Событие создать "Simferopol FS" 01.02.2020 11:00 15:00');
 //$result = $telegram -> getWebhookUpdates('Событие удалить Simferopol FS1');
 //$result = $telegram -> getWebhookUpdates('Simferopol FS');
@@ -159,22 +160,24 @@ if($text){
             ])
         ]);
 
+
     //
+    // -- СОСТОЯНИЕ
     } else if (mb_strtolower($text,'UTF-8') == "состояние") {
         $reply = '';
-        if (count($aFirstRecord) > 0) {
-            $aSecondRecord = $storage->getAgentData(1);
-            if (count($aSecondRecord) > 0) {
-                $reply .= getDeltaBlock($aSecondRecord['data'], $aFirstRecord['data']);
-            }
+        if (strlen($eventString) > 0) {
+            //
+            $reply .= 'Вы зарегистрированы на событие "' . $eventString . '"';
         } else {
-            $reply .= 'Вы не зарегистрированы. Скиньте данные вашего профиля.';
+            //
+            $reply .= 'Вы не зарегистрированы. Вам надо зарегистрироваться на одно из предстоящих событий';
         }
 
         $reply .= getMessagesBlock($storage, isAdmin($nickName));
         $telegram->sendMessage([
             'chat_id' => $chatId,
             'text' => $reply,
+            'parse_mode'=> 'HTML',
             'reply_markup' => $telegram->replyKeyboardMarkup([
                 'keyboard' => $aKeyboard,
                 'resize_keyboard' => true,
@@ -418,10 +421,34 @@ function getDeltaBlock(array $aNewData, array $aOldData)
     }
     return $reply;
 }
-
-function isAdmin($nickName)
+ /**
+  * админом может только человек с заполнеными именем пользователя (никнеймом) в Телеграм
+ */
+function isAdmin($eventname='', $nickname='')
 {
-    return in_array($nickName, [
-        'testNickname', // telegram nicknames without @
-    ]);
+    //return true; // DEBUG: все и везде админы!
+
+    /** @var $aAdmins array - Ники из этого списка всегда будут админскими */
+    $aAdmins = [
+        //'testNickname', // telegram nicknames without @
+    ];
+
+    global $storage, $nickName, $eventString;
+    // Если событие не указано - берём текущее
+    if (strlen($eventname) == 0) {
+        $eventname = $eventString;
+    }
+    // Если пользователь не указан - берём текущего
+    if (strlen($nickname) == 0) {
+        $nickname = $nickName;
+    }
+    // Если имя пользователя не указано (в настройках Телеграм) - админом он быть не может
+    if (strlen($nickname) == 0) {
+        return false;
+    }
+    // Пользователи из этого списка всегда админы
+    if (in_array($nickname, $aAdmins)) {
+        return true;
+    }
+    return $storage->isAdmin($eventname, $nickname);
 }

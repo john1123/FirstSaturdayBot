@@ -135,6 +135,7 @@ if($text){
         ]);
 
     //
+    // -- ПОМОЩЬ
     } else if (mb_strtolower($text,'UTF-8') == "помощь") {
         $reply  = 'Бот предназначен для отслеживания и учёта изменений игроков Ingress. Для работы нужно в игре скопировать данные профиля в Ingress Prime и как есть отправить их боту.' . PHP_EOL;
         $reply .= 'Исходный код доступен по адресу https://github.com/john1123/FirstSaturdayBot/' . PHP_EOL;
@@ -167,7 +168,13 @@ if($text){
         $reply = '';
         if (strlen($eventString) > 0) {
             //
-            $reply .= 'Вы зарегистрированы на событие "' . $eventString . '"';
+            $reply .= 'Вы зарегистрированы на событие "' . $eventString . '".';
+            $aEventData = $storage->eventGet($eventString);
+            $sEventDate = $aEventData['data']['start'];
+            $sDiff = date_difference(date('d.m.Y H:i:s'), $aEventData['data']['start']);
+            //
+
+            $reply .= 'Событие начнётся через ' . $sDiff;
         } else {
             //
             $reply .= 'Вы не зарегистрированы. Вам надо зарегистрироваться на одно из предстоящих событий';
@@ -218,7 +225,7 @@ if($text){
             }
             $reply .= getMessagesBlock($storage, isAdmin($nickName));
         } else {
-            $reply .= 'Зарегистрируйтесь на одно из событий.';
+            $reply .= 'Вы не заегистрированы. Зарегистрируйтесь на одно из событий.';
             $reply .= getMessagesBlock($storage, isAdmin($nickName));
         }
 
@@ -400,16 +407,8 @@ function getDeltaBlock(array $aNewData, array $aOldData)
         $reply .= PHP_EOL . 'Старые данные: ' . $sOldDate . PHP_EOL;
         $reply .= 'Новые данные: ' . $sNewDate . PHP_EOL;
 
-        $aDiff = [];
-        $start_date = new DateTime($sNewDate);
-        $since_start = $start_date->diff(new DateTime($sOldDate));
-        if ($since_start->y > 0) $aDiff[] = $since_start->y . 'лет.';
-        if ($since_start->m > 0) $aDiff[] = $since_start->m . 'мес.';
-        if ($since_start->d > 0) $aDiff[] = $since_start->d . 'дн.';
-        if ($since_start->h > 0) $aDiff[] = $since_start->h . 'час.';
-        if ($since_start->i > 0) $aDiff[] = $since_start->i . 'мин.';
-        if ($since_start->s > 0) $aDiff[] = $since_start->s . 'сек.';
-        $sDiff = count($aDiff) > 0 ? implode(' ', $aDiff) : 'отсутствует';
+        $sDiff = date_difference($sNewDate, $sOldDate);
+        $sDiff = strlen($sDiff > 0) ? $sDiff : 'отсутствует';
 
         $reply .= 'Разница: ' . $sDiff . PHP_EOL;
         $reply .= PHP_EOL . 'Произошедшие изменения:' . PHP_EOL;
@@ -451,4 +450,22 @@ function isAdmin($eventname='', $nickname='')
         return true;
     }
     return $storage->isAdmin($eventname, $nickname);
+}
+
+/**
+ * Возвращает разницу между двумя переданными датами
+ */
+function date_difference($sDate1, $sDate2)
+{
+    $aDiff = [];
+    $start_date = new DateTime($sDate2);
+    $since_start = $start_date->diff(new DateTime($sDate1));
+    if ($since_start->y > 0) $aDiff[] = $since_start->y . 'лет.';
+    if ($since_start->m > 0) $aDiff[] = $since_start->m . 'мес.';
+    if ($since_start->d > 0) $aDiff[] = $since_start->d . 'дн.';
+    if ($since_start->h > 0) $aDiff[] = $since_start->h . 'час.';
+    if ($since_start->i > 0) $aDiff[] = $since_start->i . 'мин.';
+    if ($since_start->s > 0) $aDiff[] = $since_start->s . 'сек.';
+    $sDiff = count($aDiff) > 0 ? implode(' ', $aDiff) : '';
+    return $sDiff;
 }

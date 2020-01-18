@@ -232,6 +232,15 @@ class Storage
         $sFilename = self::$dataDir . self::$eventsFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
+
+        // оставить только ещё не закончившиеся события
+        foreach ($aAllData as $eventName => $aData) {
+            $dateEnd = $aAllData[$eventName]['data']['end'];
+            if (time() >= strtotime($dateEnd)) {
+                unset ($aAllData[$eventName]);
+            }
+        }
+
         return $fullData ? $aAllData : array_keys($aAllData);
     }
 

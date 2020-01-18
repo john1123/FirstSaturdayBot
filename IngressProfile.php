@@ -58,24 +58,25 @@ class IngressProfile
         'Umbra: Unique Resonator Slots Deployed',
         'Recursions',
     ];
-    //
+    /** @var $firstValuesPhrase - Very first parameters name */
     protected static $firstKeysPhrase = 'Time Span';
+    /** @var $firstValuesPhrase - Data is assumed correct only if it contains one of the following values */
     protected static $firstValuesPhrase = [
         'ЗА ВСЕ ВРЕМЯ',
         'ALL TIME',
     ];
 
-    /** Параметры, которые участвуют в вычислении разницы */
+    /** Параметры, которые участвуют в подсчёте результатов игроков */
     public static $aDeltaKeys = [
         'Level',
         'Current AP',
         'Distance Walked',
-//        'Resonators Deployed',
-        'Links Created',
-        'Control Fields Created',
+        'Resonators Deployed',
+//        'Links Created',
+//        'Control Fields Created',
         'Portals Captured',
-        'Unique Portals Captured',
-//        'Mods Deployed',
+//        'Unique Portals Captured',
+        'Mods Deployed',
         'Resonators Destroyed',
         'Portals Neutralized',
 //        'Hacks',
@@ -176,7 +177,7 @@ class IngressProfile
             $sKeys = trim(substr($sFullParameters, 0, $valuePos));
             $sValues = substr($sFullParameters, $valuePos);
         }
-        if (strlen($sValues) === 0) {throw new Exception('Parse error. Unable to find parameters');}
+        if (strlen($sValues) === 0) {throw new Exception('Parse error. Unable to find parameters. Possible wrong Time Span');}
 
         $availableParams = array_reverse(self::$availableParams);
         $aValues = array_reverse(mb_split('\s', $sValues));

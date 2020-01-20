@@ -19,9 +19,9 @@ use John1123\Logger\File as Logger;
 $logger = new Logger('./data/bot_' . date('Ymd') . '.log');
 
 $telegram = new Api(TELEGRAM_BOT_TOKEN);
-//$result = $telegram -> getWebhookUpdates();
+$result = $telegram -> getWebhookUpdates();
 //$result = $telegram -> getWebhookUpdates('Начать');
-$result = $telegram -> getWebhookUpdates('Состояние');
+//$result = $telegram -> getWebhookUpdates('Состояние');
 //$result = $telegram -> getWebhookUpdates('Событие создать "Simferopol FS" 01.02.2020 11:00 15:00');
 //$result = $telegram -> getWebhookUpdates('Событие удалить Simferopol FS1');
 //$result = $telegram -> getWebhookUpdates('Simferopol FS');
@@ -167,14 +167,14 @@ if($text){
     } else if (mb_strtolower($text,'UTF-8') == "состояние") {
         $reply = '';
         if (strlen($eventString) > 0) {
-            //
-            $reply .= 'Вы зарегистрированы на событие "' . $eventString . '".';
-            $aEventData = $storage->eventGet($eventString);
-            $sEventDate = $aEventData['data']['start'];
-            $sDiff = date_difference(date('d.m.Y H:i:s'), $aEventData['data']['start']);
-            //
+            // зарегистрированы на событие $eventString
+            //$reply .= 'Вы зарегистрированы на событие "' . $eventString . '". ';
+            $aOldData = $storage->getAgentData(0);
+            if (count($aOldData) > 0) {
+                $aNewData = $storage->getAgentData(1);
+                $reply .= getDeltaBlock($aNewData['data'], $aOldData['data']);
 
-            $reply .= 'Событие начнётся через ' . $sDiff;
+            }
         } else {
             //
             $reply .= 'Вы не зарегистрированы. Вам надо зарегистрироваться на одно из предстоящих событий';
@@ -204,24 +204,30 @@ if($text){
             $eventTimeEnd = $eventData['data']['end'];
 
             if (time() < strtotime($eventTimeStart)) {
-                $reply .= '' . $eventString . ' ещё не наступил. Мы пришлём вам уведомление, когда оно начнётся.';
+                $reply .= '"' . $eventString . '" ещё не наступил.';
+                $reply .= ' Событие начнётся через ' . date_difference(date('d.m.Y H:i:s'), $eventTimeStart);
+                $reply .= ' Мы пришлём вам уведомление, когда оно начнётся.';
             } elseif (time() > strtotime($eventTimeEnd)) {
                 $reply .= '' . $eventString . '  уже закончился.';
                 // Отменить регистрацию пользователя?
                 // $storage->userUnregister($eventName, $nickName);
             } else {
-                $aLastData = IngressProfile::parseProfile($text);
-                $storage->setAgentData($aLastData);
-                $aSecondRecord = $storage->getAgentData(1);
-                if (count($aSecondRecord) > 0) {
-                    $reply .= 'Данные добавлены.' . PHP_EOL;
-                    $reply .= getDeltaBlock($aLastData, $aFirstRecord['data']);
-                    $reply .= getMessagesBlock($storage, isAdmin($nickName));
-                } else {
-                    $reply .= 'Данные сохранены.' . PHP_EOL;
-                    $reply .= getMessagesBlock($storage, isAdmin($nickName));
+                try {
+                    $aLastData = IngressProfile::parseProfile($text);
+                    $storage->setAgentData($aLastData);
+                    $aSecondRecord = $storage->getAgentData(1);
+                    if (count($aSecondRecord) > 0) {
+                        $reply .= 'Данные добавлены.' . PHP_EOL;
+                        $reply .= getDeltaBlock($aLastData, $aFirstRecord['data']);
+                        $reply .= getMessagesBlock($storage, isAdmin($nickName));
+                    } else {
+                        $reply .= 'Данные сохранены.' . PHP_EOL;
+                        $reply .= getMessagesBlock($storage, isAdmin($nickName));
+                    }
+                } catch (Exception $e) {
+                    $reply .= 'Ошибка: Данные не могут быть распознаны. ';
+                    $reply .= 'Необходимо отправлять боту статистику ЗА ВСЁ ВРЕМЯ';
                 }
-
             }
             $reply .= getMessagesBlock($storage, isAdmin($nickName));
         } else {
@@ -243,7 +249,6 @@ if($text){
 
     // Создание-удаление события
     } else if (preg_match('/^Событие\s+(создать|удалить)\s+(.+)$/ui', $text, $regs)) {
-        $reply = 'Недостаточно прав' . PHP_EOL;
         if (isAdmin($nickName) == true) {
             $eventAction = mb_strtolower($regs[1]);
             $eventString   = trim($regs[2]);
@@ -263,7 +268,25 @@ if($text){
                         'end' => $end,
                         'admin' => array_unique($aAdmins),
                     ]);
-                    $reply = 'Событие "' . $eventName . '" добавлено';
+                    $storage->setEventName($eventName);
+                    $storage->setMessage(
+                        'Начат ' . $eventName . PHP_EOL .
+                        'Не забудьте взломать стартовый портал и прислать боту статистику.',
+                        $start
+                    );
+
+                    $storage->setMessage(
+                        'Осталось 10 минут до конца ' . $eventName . PHP_EOL .
+                        'Взломайте любой портал и отправьте боту статистику.',
+                        date('d.m.Y H:i:s', (strtotime($end) - 10*60))
+                    );
+                    $storage->setMessage(
+                        'Окончен ' . $eventName . PHP_EOL .
+                        'Статистика больше не принимается.',
+                        $end
+                    );
+                    $reply = 'Событие "' . $eventName . '" добавлено. ';
+                    $reply = 'Используйте формат вида: "Событие создать "Название события" ДатаСобытия ВремяНачала ВремяКонца Админ1 Админ2 ... "';
 
                 } else {
                     // неверный формат. Ожидается:
@@ -429,7 +452,7 @@ function isAdmin($eventname='', $nickname='')
 
     /** @var $aAdmins array - Ники из этого списка всегда будут админскими */
     $aAdmins = [
-        //'testNickname', // telegram nicknames without @
+        'testNickname', // telegram nicknames without @
     ];
 
     global $storage, $nickName, $eventString;

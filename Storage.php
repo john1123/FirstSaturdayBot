@@ -63,10 +63,9 @@ class Storage
      * Добавить новое сообщение
      *
      * @param String $sMessage Сообщение
-     * @param String $type Тип сообщения. Сейчас не используется.
-     * @return array Массив сообщений в виде готовых для вывода строк
+     * @param Array $aParams Дополнительные параметры сообщения.
      */
-    public function setMessage($sMessage, $type='text')
+    public function setMessage($sMessage, $when='', array $aParams=[])
     {
         //$sFilename = self::$dataDir . self::$messagesFile;
         $sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$messagesFile;
@@ -81,12 +80,16 @@ class Storage
             }
         }
         $iId++;
+        $aPar = [];
+        foreach ($aParams as $name => $value) {
+            $aPar[$name] = $value;
+        }
         $aMessages['msg' . $iId] = [
-            'date'   => date('d.m.Y'),
-            'time'   => date('H:i:s'),
-            'author' => $this->username,
+            'from' => $this->username,
+            'to' => '',
             'text'   => $sMessage,
-            'type'   => $type,
+            'when' => strlen($when) > 0 ? $when : date('d.m.Y H:i:s'),
+            'params' => $aParams,
         ];
         file_put_contents($sFilename, json_encode($aMessages, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
     }

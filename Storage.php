@@ -120,6 +120,17 @@ class Storage
         }
     }
 
+    public function getAllData()
+    {
+        $aAllData = [];
+        $sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$dataFile;
+        if (file_exists($sFilename)) {
+            $sContents = @file_get_contents($sFilename);
+            $aAllData = strlen($sContents) > 0 ? (array)json_decode($sContents, true) : [];
+        }
+        return $aAllData;
+    }
+
     /**
      * Получить данные для агента (указанного в конструкторе)
      *

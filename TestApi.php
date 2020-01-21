@@ -54,4 +54,10 @@ class Api
         return json_encode($params, JSON_UNESCAPED_UNICODE);
 
     }
+    public function sendDocument(array $params)
+    {
+        $this->logger->log('sendDocument(' . json_encode($params, JSON_UNESCAPED_UNICODE) . ')');
+        return json_encode($params, JSON_UNESCAPED_UNICODE);
+
+    }
 }

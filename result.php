@@ -4,26 +4,22 @@ include 'IngressProfile.php';
 include 'Storage.php';
 include 'vendor/autoload.php';
 
-$aAllData = Storage::getAllData();
-$aAgents = [];
-foreach ($aAllData as $username => $aData) {
-    if (count($aData) < 2) {
-        continue;
-    }
-    $aAgents[$aData[0]['data']['Agent Faction']][$aData[0]['data']['Agent Name']] = $aData;
+if (!array_key_exists('file', $_GET)) {
+    die('ERROR. FILE parametre isnot specified');
 }
+$file = urldecode($_GET['file']);
+$eventName = substr($file,0, -4);
 
+$storage = new Storage('');
+$storage->setEventName($eventName);
+
+$aAllData = $storage->getAllData();
 $aAgents = [];
-$sFilename = 'data/statistics.json';
-if (file_exists($sFilename)) {
-    $sContents = file_get_contents($sFilename);
-    $aAllData = strlen($sContents) > 0 ? (array)json_decode($sContents, true) : [];
-    foreach ($aAllData as $username => $aData) {
-        if (count($aData) < 2) {
-            continue;
-        }
-        $aAgents[$aData[0]['data']['Agent Faction']][$aData[0]['data']['Agent Name']] = $aData;
-    }
+foreach ($aAllData as $chatName => $aData) {
+//    if (count($aData) < 2) {
+//        continue;
+//    }
+    $aAgents[$aData[0]['data']['Agent Faction']][$aData[0]['data']['Agent Name']] = $aData;
 }
 
 $document = new \PHPExcel();

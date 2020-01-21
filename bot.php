@@ -25,8 +25,8 @@ $result = $telegram -> getWebhookUpdates();
 //$result = $telegram -> getWebhookUpdates('Событие создать "SimferopolFS - Тест" 21.01.2020 15:00 21:00');
 //$result = $telegram -> getWebhookUpdates('Событие удалить Simferopol FS1');
 //$result = $telegram -> getWebhookUpdates('SimferopolFS - Тест');
-$result = $telegram -> getWebhookUpdates($morkwa1);
-//$result = $telegram -> getWebhookUpdates('Сообщение Превед медвед!');
+//$result = $telegram -> getWebhookUpdates($morkwa1);
+$result = $telegram -> getWebhookUpdates('Результаты');
 
 $text = @$result["message"]["text"];
 $chatId = @$result["message"]["chat"]["id"];
@@ -134,6 +134,34 @@ if($text){
             ])
         ]);
 
+    //
+    // --РЕЗУЛЬТАТЫ
+    } else if (mb_strtolower($text,'UTF-8') == "результаты") {
+        if (isAdmin($nickName) == true) {
+            $response = $telegram->sendDocument([
+                'chat_id' => $chatId,
+                // result.xls в конце строки добавлен для того, чтобы телеграм видел в конце строки файл эксель.
+                // Вроде как без этого не заработает (не уверен)
+                'document' => 'https://'
+                    . $_SERVER['SERVER_NAME']
+                    . str_replace('bot.php', 'result.php', $_SERVER['SCRIPT_NAME'])
+                    . '?file=' . urlencode($eventString) . '.xls',
+                'caption' => 'Файл с результатами',
+            ]);
+            // http://firstsaturdaybot/result.php?file=SimferopolFS%20-%20%D0%A2%D0%B5%D1%81%D1%82.xls
+        } else {
+            $reply = 'Недостаточно прав' . PHP_EOL;
+            $telegram->sendMessage([
+                'chat_id' => $chatId,
+                'parse_mode'=> 'HTML',
+                'text' => $reply,
+                'reply_markup' => $telegram->replyKeyboardMarkup([
+                    'keyboard' => $aKeyboard,
+                    'resize_keyboard' => false,
+                    'one_time_keyboard' => true,
+                ])
+            ]);
+        }
 
     //
     // -- СОСТОЯНИЕ
@@ -307,47 +335,6 @@ if($text){
             'chat_id' => $chatId,
             'text' => $reply,
             'parse_mode'=> 'HTML',
-            'reply_markup' => $telegram->replyKeyboardMarkup([
-                'keyboard' => $aKeyboard,
-                'resize_keyboard' => false,
-                'one_time_keyboard' => true,
-            ])
-        ]);
-    } else if (preg_match('/^Сообщение\s(.+)/ui', $text, $regs)) {
-        $reply = 'Недостаточно прав' . PHP_EOL;
-        if (isAdmin($nickName) == true) {
-            $msgText = trim($regs[1]);
-            $reply = '';
-            if (preg_match('/^удалить\s([^\s]+)/ui', $msgText, $regs)) {
-                $msgId = trim($regs[1]);
-                $storage->deleteMessage($msgId);
-                $reply .= 'Удаляем сообщение: ' . $msgId;
-            } else {
-                $storage->setMessage($msgText);
-                $reply .= 'Добавляем сообщение.';
-            }
-        }
-
-        $telegram->sendMessage([
-            'chat_id' => $chatId,
-            'text' => $reply,
-            'parse_mode'=> 'HTML',
-            'reply_markup' => $telegram->replyKeyboardMarkup([
-                'keyboard' => $aKeyboard,
-                'resize_keyboard' => false,
-                'one_time_keyboard' => true,
-            ])
-        ]);
-    } else if (mb_strtolower($text,'UTF-8') == "сообщения очистить") {
-        $reply = 'Недостаточно прав' . PHP_EOL;
-        if (isAdmin($nickName) == true) {
-            $storage->clearMessages();
-            $reply = 'Все сообщения удалены.';
-        }
-        $telegram->sendMessage([
-            'chat_id' => $chatId,
-            'text' => $reply,
-            //'parse_mode'=> 'HTML',
             'reply_markup' => $telegram->replyKeyboardMarkup([
                 'keyboard' => $aKeyboard,
                 'resize_keyboard' => false,

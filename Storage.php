@@ -48,7 +48,7 @@ class Storage
      * @param String $sMessage Сообщение
      * @param Array $aParams Дополнительные параметры сообщения.
      */
-    public function setMessage($sMessage, $to, $when='', array $aParams=[])
+    public function setMessage($sMessage, $to, $from=null, array $aParams=[])
     {
         //$sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$messagesFile;
         $sFilename = self::$dataDir . self::$messagesFile;
@@ -68,10 +68,10 @@ class Storage
             $aPar[$name] = $value;
         }
         $aMessages['msg' . $iId] = [
-            'from' => $this->username,
+            'from' => $from,
             'to' => $to,
             'text'   => $sMessage,
-            'when' => strlen($when) > 0 ? $when : date('d.m.Y H:i:s'),
+            'when' => array_key_exists('when', $aParams) ? $aParams['when'] : date('d.m.Y H:i:s'),
             'params' => $aParams,
         ];
         file_put_contents($sFilename, json_encode($aMessages, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
@@ -133,7 +133,7 @@ class Storage
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         if (count($aAllData) > 0) {
-            $aStoredAgentData = array_key_exists($this->username, $aAllData) ? $aAllData[$this->username] : [];
+            $aStoredAgentData = array_key_exists($this->chatId, $aAllData) ? $aAllData[$this->chatId] : [];
             $aAgentData = array_key_exists($recordId, $aStoredAgentData) ? $aStoredAgentData[$recordId] : [];
         }
         return $aAgentData;
@@ -151,20 +151,19 @@ class Storage
     public function setAgentData(array $aAgentData)
     {
         $aAgentData = [
-            'date' => date('d.m.Y'), // date('d.m.Y', strtotime($aAgentData['Date (yyyy-mm-dd)'])),
-            'time' => date('H:i:s'), // $aAgentData['Time (hh:mm:ss)'],
+            'time' => date('d.m.Y H:i:s'), // $aAgentData['Time (hh:mm:ss)'],
             'data' => $aAgentData,
         ];
         $sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$dataFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
-        $aStoredAgentData = array_key_exists($this->username, $aAllData) ? $aAllData[$this->username] : [];
+        $aStoredAgentData = array_key_exists($this->chatId, $aAllData) ? $aAllData[$this->chatId] : [];
         if (count($aStoredAgentData) > 0) { // Если что-то есть
             $aStoredAgentData[1] = $aAgentData;
         } else {
             $aStoredAgentData[0] = $aAgentData;
         }
-        $aAllData[$this->username] = $aStoredAgentData;
+        $aAllData[$this->chatId] = $aStoredAgentData;
         file_put_contents($sFilename, json_encode($aAllData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
     }
 
@@ -180,14 +179,14 @@ class Storage
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         if ($bLastOnly) {
-            $aStoredAgentData = array_key_exists($this->username, $aAllData) ? $aAllData[$this->username] : [];
+            $aStoredAgentData = array_key_exists($this->chatId, $aAllData) ? $aAllData[$this->chatId] : [];
             if (array_key_exists(1, $aStoredAgentData)) {
                 unset ($aStoredAgentData[1]);
-                $aAllData[$this->username] = $aStoredAgentData;
+                $aAllData[$this->chatId] = $aStoredAgentData;
             }
         } else {
-            if (array_key_exists($this->username, $aAllData)) {
-                unset ($aAllData[$this->username]);
+            if (array_key_exists($this->chatId, $aAllData)) {
+                unset ($aAllData[$this->chatId]);
             }
         }
         if (count($aAllData) > 0) {
@@ -262,9 +261,9 @@ class Storage
             'name' => $eventName,
             'start' => $eventStart,
             'end' => $eventEnd,
-            'admins' => array_key_exists('admin', $aEventData) ? $aEventData['admin'] : [$this->username],
+            'admins' => array_key_exists('admin', $aEventData) ? $aEventData['admin'] : [$this->chatId],
             'date' => date('d.m.Y H:i:s'),
-            'author' => $this->username,
+            'author' => $this->chatId,
 
         ];
         file_put_contents($sFilename, json_encode($aAllData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);

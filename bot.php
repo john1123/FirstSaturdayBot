@@ -265,20 +265,24 @@ if($text){
                         'Начат ' . $eventName . PHP_EOL .
                         'Не забудьте взломать стартовый портал и прислать боту статистику.',
                         'group:' . $eventName,
-                        $start
+                        $fullUser,
+                        ['when' => $start]
                     );
 
                     $storage->setMessage(
                         'Осталось 10 минут до конца ' . $eventName . PHP_EOL .
                         'Взломайте любой портал и отправьте боту статистику.',
                         'group:' . $eventName,
-                        date('d.m.Y H:i:s', (strtotime($end) - 10*60))
+                        $fullUser,
+                        ['when' => date('d.m.Y H:i:s', (strtotime($end) - 10*60))]
+
                     );
                     $storage->setMessage(
                         'Окончен ' . $eventName . PHP_EOL .
                         'Статистика больше не принимается.',
                         'group:' . $eventName,
-                        $end
+                        $fullUser,
+                        ['when' => $end]
                     );
                     $reply = 'Событие "' . $eventName . '" создано.';
                 } else {
@@ -363,8 +367,8 @@ if($text){
                 'firstName' => $result['message']['from']['first_name'],
                 'chatId' => $result['message']['chat']['id'],
               ]);
-            $reply  .= "Вы успешно зарегистрировались на \"<b>".$text."</b>\".";
-            $reply  .= "Мы уведомим вас, когда оно начнётся.";
+            $reply  .= "Вы успешно зарегистрировались на \"<b>".$text."</b>\"." . PHP_EOL;
+            $reply  .= "Мы уведомим вас, когда событие начнётся.";
 
         } else {
             $reply = "По запросу \"<b>".$text."</b>\" ничего не найдено.";

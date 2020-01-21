@@ -22,10 +22,10 @@ $telegram = new Api(TELEGRAM_BOT_TOKEN);
 $result = $telegram -> getWebhookUpdates();
 //$result = $telegram -> getWebhookUpdates('Начать');
 //$result = $telegram -> getWebhookUpdates('Состояние');
-//$result = $telegram -> getWebhookUpdates('Событие создать "SimferopolFS - Февраль 2020" 01.02.2020 11:00 15:00');
+//$result = $telegram -> getWebhookUpdates('Событие создать "SimferopolFS - Тест" 21.01.2020 15:00 21:00');
 //$result = $telegram -> getWebhookUpdates('Событие удалить Simferopol FS1');
-//$result = $telegram -> getWebhookUpdates('SimferopolFS - Февраль 2020');
-//$result = $telegram -> getWebhookUpdates($morkwa4);
+//$result = $telegram -> getWebhookUpdates('SimferopolFS - Тест');
+$result = $telegram -> getWebhookUpdates($morkwa1);
 //$result = $telegram -> getWebhookUpdates('Сообщение Превед медвед!');
 
 $text = @$result["message"]["text"];
@@ -34,66 +34,41 @@ if (strlen($chatId) < 1) {
     //die('Ошибка. Скрипт нельзя вызывать непосредственно из браузера! Установите вебхук вызвав https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<адрес и путь к скрипту>/bot.php');
     // Дёргать оповещения
     $storage = new Storage('');
-    $aEventsList = $storage->eventList(true);
-    foreach ($aEventsList as $eventString => $aEventData) {
-        $now = time();
-        $aEventAdmins = $aEventData['admins'];
-        $eventStart = strtotime($aEventData['start']);
-        $eventEnd = strtotime($aEventData['end']);
-        if ($now <= $eventEnd && $now >= $eventStart) {
-            $logger->log('Текущее событие: ' . $eventString);
-            $storage->setEventName($eventString);
-            $aMessages = $storage->getMessages(true);
-            $aUsers = $storage->userList();
-            if (count($aMessages) > 0 && count($aUsers) > 0) {
-
-                foreach ($aMessages as $msgId => $aMsgData) {
-                    $author = $aMsgData['author'];
-                    $msgText = $aMsgData['text'];
-
-                    foreach ($aUsers as $nickName => $aUserData) {
-                        $firstName = $aUserData['firstName'];
-                        $chatId = $aUserData['chatId'];
-
-                        $msg = '';
-                        if (in_array($author, $aEventAdmins)) {
-                            $msg .= '<b>Внимание!</b> '; // Сообщение от админа
-                        } else {
-                            $msg .= '@' . $author . ': ';
-                        }
-                        $msg .= $msgText;
-                        $telegram->sendMessage([
-                            'chat_id' => $chatId,
-                            'text' => $msg,
-                            'parse_mode'=> 'HTML',
-                            'reply_markup' => $telegram->replyKeyboardMarkup([
-                                'keyboard' => $aKeyboard,
-                                'resize_keyboard' => false,
-                                'one_time_keyboard' => true,
-                            ])
-                        ]);
-                        $logger->log('Сообщение: ' . $msg);
-                    }
-                    $storage->deleteMessage($msgId);
+    $aMessages = $storage->getMessages();
+    $cache = [];
+    foreach ($aMessages as $msgId => $msgData) {
+        if (time() >= strtotime($msgData['when'])) {
+            if (preg_match('/^group:(.+)$/m', $msgData['to'], $regs)) {
+                $msgEventName = $regs[1];
+                if (!array_key_exists($msgEventName, $cache)) {
+                    $aUserList = $storage->userList($msgEventName);
+                    $cache[$msgEventName] = $aUserList;
+                } else {
+                    $aUserList = $cache[$msgEventName];
                 }
+                foreach ($aUserList as $msgChatId => $msgUserData) {
+                    $telegram->sendMessage([
+                        'chat_id' => $msgChatId,
+                        'text' => $msgData['text'],
+                    ]);
+                }
+                $storage->deleteMessage($msgId);
             }
-            $a = 2;
         }
     }
     die;
 }
 
-/** @var $nickName - никнейм текущего пользователя */
 $nickName = strlen($result["message"]["from"]["username"]) > 0 ? $result["message"]["from"]["username"] : '';
 /** @var $fullUser - полное имя текущего пользователя */
 $fullUser = $result["message"]["from"]["first_name"] . (strlen($nickName) > 0 ? ' (@' . $nickName . ')' : '');
 
 $aKeyboard = [['Состояние'],['Помощь']];
 
-$storage = new Storage($nickName);
+$storage = new Storage($chatId);
 
 /** @var $eventString - мероприятие на которое зарегистрирован пользователь */
-$eventString = $storage->userGetRegistration($nickName);
+$eventString = $storage->userGetRegistration($chatId);
 if (strlen($eventString) > 0) {
     $storage->setEventName($eventString);
 }
@@ -120,7 +95,7 @@ if($text){
 
         // Если где-то зарегистрированы - отменяем регистрацию
         if (strlen($eventString) > 0) {
-            $storage->userUnregister($eventString, $nickName);
+            $storage->userUnregister($eventString, $chatId);
         }
         $aKeyboard = $storage->eventList();
 
@@ -175,12 +150,13 @@ if($text){
             } else {
                 //$reply .= 'Вы зарегистрированы на событие "' . $eventString . '". ';
                 $reply .= 'Сейчас проходит ' . $eventString . PHP_EOL;
-                $reply .= 'Вы можете отправлять статистику боту, обновляя ваш результат.' . PHP_EOL . PHP_EOL;
+                $reply .= 'Вы можете отправлять статистику боту, обновляя ваш результат.' . PHP_EOL;
 
                 $aOldData = $storage->getAgentData(0);
                 if (count($aOldData) > 0) {
                     $aNewData = $storage->getAgentData(1);
                     if (count($aNewData) > 0) {
+                        $reply .= 'Ваши последние изменения:' . PHP_EOL;
                         $reply .= getDeltaBlock($aNewData['data'], $aOldData['data']);
                     } else {
                         $reply .= 'Есть начальные данные. ';
@@ -226,7 +202,7 @@ if($text){
             } elseif (time() > strtotime($eventTimeEnd)) {
                 $reply .= '' . $eventString . '  уже закончился.';
                 // Отменить регистрацию пользователя?
-                // $storage->userUnregister($eventName, $nickName);
+                // $storage->userUnregister($eventName, $chatId);
             } else {
                 try {
                     $aLastData = IngressProfile::parseProfile($text);
@@ -288,26 +264,28 @@ if($text){
                     $storage->setMessage(
                         'Начат ' . $eventName . PHP_EOL .
                         'Не забудьте взломать стартовый портал и прислать боту статистику.',
+                        'group:' . $eventName,
                         $start
                     );
 
                     $storage->setMessage(
                         'Осталось 10 минут до конца ' . $eventName . PHP_EOL .
                         'Взломайте любой портал и отправьте боту статистику.',
+                        'group:' . $eventName,
                         date('d.m.Y H:i:s', (strtotime($end) - 10*60))
                     );
                     $storage->setMessage(
                         'Окончен ' . $eventName . PHP_EOL .
                         'Статистика больше не принимается.',
+                        'group:' . $eventName,
                         $end
                     );
-                    $reply = 'Событие "' . $eventName . '" добавлено. ';
-                    $reply = 'Используйте формат вида: "Событие создать "Название события" ДатаСобытия ВремяНачала ВремяКонца Админ1 Админ2 ... "';
-
+                    $reply = 'Событие "' . $eventName . '" создано.';
                 } else {
                     // неверный формат. Ожидается:
                     // "Название мероприятия" дд.мм.гггг времяНачала времяКонца админ1 авмин2 админ3 ...
-                    $reply = 'Событие не добавлено. ' . $eventString . ' добавлено';
+                    $reply = 'Событие не добавлено.' . PHP_EOL;
+                    $reply = 'Не могу разобрать команду.';
                 }
             } elseif ($eventAction == 'удалить') {
                 try {
@@ -379,8 +357,9 @@ if($text){
         // Если передано имя события - регистрируем пользователя на него
         $aEvents = $storage->eventList();
         if (in_array($text, $aEvents)) {
-            $storage->userReset($nickName); // Надо ли?
-            $storage->userRegister($text, $nickName, [
+            $storage->userReset($chatId); // Надо ли?
+            $storage->userRegister($text, $result['message']['chat']['id'], [
+                'nickName' => $nickName,
                 'firstName' => $result['message']['from']['first_name'],
                 'chatId' => $result['message']['chat']['id'],
               ]);

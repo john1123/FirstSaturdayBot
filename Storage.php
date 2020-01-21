@@ -19,19 +19,17 @@ class Storage
     protected static $dataDir = 'data/';
 
     protected $evenName = '';
-    protected $username;
+    protected $chatId;
 
-    public function __construct($username)
+    public function __construct($chatId)
     {
-        $this->username = $username;
+        $this->chatId = $chatId;
     }
 
     public function setEventName($name)
     {
         $this->evenName = $name;
     }
-
-
 
     /**
      * Получить все сообщения в виде массива
@@ -41,21 +39,6 @@ class Storage
         $sFilename = self::$dataDir . self::$messagesFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aMessages = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
-
-        $aText = [];
-        if ($fullData === false) {
-            foreach ($aMessages as $key => $value) {
-                $aText[$key] = ''
-//                    . $value['date']
-//                    . ' '
-                    . $value['time']
-                    . ' @'
-                  . $value['author']
-                  . ': '
-                  . $value['text'];
-            }
-            $aMessages = $aText;
-        }
         return $aMessages;
     }
 
@@ -65,7 +48,7 @@ class Storage
      * @param String $sMessage Сообщение
      * @param Array $aParams Дополнительные параметры сообщения.
      */
-    public function setMessage($sMessage, $when='', array $aParams=[])
+    public function setMessage($sMessage, $to, $when='', array $aParams=[])
     {
         //$sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$messagesFile;
         $sFilename = self::$dataDir . self::$messagesFile;
@@ -86,7 +69,7 @@ class Storage
         }
         $aMessages['msg' . $iId] = [
             'from' => $this->username,
-            'to' => '',
+            'to' => $to,
             'text'   => $sMessage,
             'when' => strlen($when) > 0 ? $when : date('d.m.Y H:i:s'),
             'params' => $aParams,
@@ -305,29 +288,28 @@ class Storage
     /**
      * Регистрирует пользователя на указанное событие(мероприятие)
      */
-    public function userRegister($eventName, $userName, $aUserData)
+    public function userRegister($eventName, $chatId, $aUserData)
     {
         $sFilename = self::$dataDir . self::$usersFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
 
-        $aUserData['date'] = date('d.m.Y');
-        $aUserData['time'] = date('H:i:s');
+        $aUserData['time'] = date('d.m.Y H:i:s');
 
-        $aAllData[$eventName][$userName] = $aUserData;
+        $aAllData[$eventName][$chatId] = $aUserData;
         file_put_contents($sFilename, json_encode($aAllData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
     }
 
     /**
      * Отменяет регистрацию пользователя на указанное событие(мероприятие) (и только на нём)
      */
-    public function userUnregister($eventName, $userName)
+    public function userUnregister($eventName, $chatId)
     {
         $sFilename = self::$dataDir . self::$usersFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
-        if (array_key_exists($eventName, $aAllData) && array_key_exists($userName, $aAllData[$eventName])) {
-            unset ($aAllData[$eventName][$userName]);
+        if (array_key_exists($eventName, $aAllData) && array_key_exists($chatId, $aAllData[$eventName])) {
+            unset ($aAllData[$eventName][$chatId]);
             file_put_contents($sFilename, json_encode($aAllData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
         }
     }
@@ -336,16 +318,16 @@ class Storage
      * Возвращает название первого найденного события(мероприятие) на которое зарегистрирован пользователь
      * Если также указано и название события, возвращает данные регистрации этого пользователя на событии
      */
-    public function userGetRegistration($userName, $eventName='')
+    public function userGetRegistration($chatId, $eventName='')
     {
         $sFilename = self::$dataDir . self::$usersFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
-        if (strlen($eventName) > 0 && array_key_exists($eventName, $aAllData) && array_key_exists($userName, $aAllData[$eventName])) {
-            $aAllData[$eventName][$userName];
+        if (strlen($eventName) > 0 && array_key_exists($eventName, $aAllData) && array_key_exists($chatId, $aAllData[$eventName])) {
+            $aAllData[$eventName][$chatId];
         }
         foreach ($aAllData as $eventName => $aEventUsers) {
-            if (array_key_exists($userName, $aEventUsers)) {
+            if (array_key_exists($chatId, $aEventUsers)) {
                 return $eventName;
             }
         }
@@ -356,14 +338,14 @@ class Storage
      * Удалить указанного пользователя отовсюду
      * (отменяет регистрацию на все события(мероприятия))
      */
-    public function userReset($userName)
+    public function userReset($chatId)
     {
         $sFilename = self::$dataDir . self::$usersFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
 
         foreach ($aAllData as $eventName => $aEventUsers) {
-            unset($aAllData[$eventName][$userName]);
+            unset($aAllData[$eventName][$chatId]);
         }
         file_put_contents($sFilename, json_encode($aAllData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
     }

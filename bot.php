@@ -22,10 +22,10 @@ $telegram = new Api(TELEGRAM_BOT_TOKEN);
 $result = $telegram -> getWebhookUpdates();
 //$result = $telegram -> getWebhookUpdates('Начать');
 //$result = $telegram -> getWebhookUpdates('Состояние');
-//$result = $telegram -> getWebhookUpdates('Событие создать "Simferopol FS" 01.02.2020 11:00 15:00');
+//$result = $telegram -> getWebhookUpdates('Событие создать "SimferopolFS - Февраль 2020" 01.02.2020 11:00 15:00');
 //$result = $telegram -> getWebhookUpdates('Событие удалить Simferopol FS1');
-//$result = $telegram -> getWebhookUpdates('Simferopol FS');
-//$result = $telegram -> getWebhookUpdates($morkwa3);
+//$result = $telegram -> getWebhookUpdates('SimferopolFS - Февраль 2020');
+//$result = $telegram -> getWebhookUpdates($morkwa4);
 //$result = $telegram -> getWebhookUpdates('Сообщение Превед медвед!');
 
 $text = @$result["message"]["text"];
@@ -37,9 +37,9 @@ if (strlen($chatId) < 1) {
     $aEventsList = $storage->eventList(true);
     foreach ($aEventsList as $eventString => $aEventData) {
         $now = time();
-        $aEventAdmins = $aEventData['data']['admin'];
-        $eventStart = strtotime($aEventData['data']['start']);
-        $eventEnd = strtotime($aEventData['data']['end']);
+        $aEventAdmins = $aEventData['admins'];
+        $eventStart = strtotime($aEventData['start']);
+        $eventEnd = strtotime($aEventData['end']);
         if ($now <= $eventEnd && $now >= $eventStart) {
             $logger->log('Текущее событие: ' . $eventString);
             $storage->setEventName($eventString);
@@ -68,8 +68,8 @@ if (strlen($chatId) < 1) {
                             'parse_mode'=> 'HTML',
                             'reply_markup' => $telegram->replyKeyboardMarkup([
                                 'keyboard' => $aKeyboard,
-                                'resize_keyboard' => true,
-                                'one_time_keyboard' => false,
+                                'resize_keyboard' => false,
+                                'one_time_keyboard' => true,
                             ])
                         ]);
                         $logger->log('Сообщение: ' . $msg);
@@ -122,15 +122,15 @@ if($text){
         if (strlen($eventString) > 0) {
             $storage->userUnregister($eventString, $nickName);
         }
+        $aKeyboard = $storage->eventList();
 
-        $reply .= getMessagesBlock($storage, isAdmin($nickName));
         $telegram->sendMessage([
             'chat_id' => $chatId,
             'text' => $reply,
             'reply_markup' => $telegram->replyKeyboardMarkup([
-                'keyboard' => $storage->eventList(),
-                'resize_keyboard' => true,
-                'one_time_keyboard' => false,
+                'keyboard' => $aKeyboard,
+                'resize_keyboard' => false,
+                'one_time_keyboard' => true,
             ])
         ]);
 
@@ -148,16 +148,14 @@ if($text){
             $reply .= '<b>Результаты</b> - Скачать xls-файл с результатами всех игроков' . PHP_EOL;
         }
 
-        $reply .= getMessagesBlock($storage, isAdmin($nickName));
-
         $telegram->sendMessage([
             'chat_id' => $chatId,
             'parse_mode'=> 'HTML',
             'text' => $reply,
             'reply_markup' => $telegram->replyKeyboardMarkup([
                 'keyboard' => $aKeyboard,
-                'resize_keyboard' => true,
-                'one_time_keyboard' => false,
+                'resize_keyboard' => false,
+                'one_time_keyboard' => true,
             ])
         ]);
 
@@ -167,28 +165,46 @@ if($text){
     } else if (mb_strtolower($text,'UTF-8') == "состояние") {
         $reply = '';
         if (strlen($eventString) > 0) {
-            // зарегистрированы на событие $eventString
-            //$reply .= 'Вы зарегистрированы на событие "' . $eventString . '". ';
-            $aOldData = $storage->getAgentData(0);
-            if (count($aOldData) > 0) {
-                $aNewData = $storage->getAgentData(1);
-                $reply .= getDeltaBlock($aNewData['data'], $aOldData['data']);
+            $aEventData = $storage->eventGet($eventString);
+            if (time() < strtotime($aEventData['start'])) {
+                $reply .= 'Ждём начала ' . $eventString . PHP_EOL;
+                $reply .= 'До начала осталось ' . date_difference(date('d.m.Y H:i:s'), $aEventData['start']);
+            } else if(time() > strtotime($aEventData['end'])) {
+                $reply .= 'Уже окончен ' . $eventString . PHP_EOL;
+                $reply .= 'С окончания прошло ' . date_difference(date('d.m.Y H:i:s'), $aEventData['end']);
+            } else {
+                //$reply .= 'Вы зарегистрированы на событие "' . $eventString . '". ';
+                $reply .= 'Сейчас проходит ' . $eventString . PHP_EOL;
+                $reply .= 'Вы можете отправлять статистику боту, обновляя ваш результат.' . PHP_EOL . PHP_EOL;
 
+                $aOldData = $storage->getAgentData(0);
+                if (count($aOldData) > 0) {
+                    $aNewData = $storage->getAgentData(1);
+                    if (count($aNewData) > 0) {
+                        $reply .= getDeltaBlock($aNewData['data'], $aOldData['data']);
+                    } else {
+                        $reply .= 'Есть начальные данные. ';
+                        $reply .= 'Для получения изменений, оправьте боту вашу статистику ещё раз.' . PHP_EOL;
+                    }
+                } else {
+                    $reply .= 'Нет данных. Отправьте боту вашу статистику.' . PHP_EOL;
+                }
             }
         } else {
             //
-            $reply .= 'Вы не зарегистрированы. Вам надо зарегистрироваться на одно из предстоящих событий';
+            $reply .= 'Вы не зарегистрированы. Вам надо зарегистрироваться на одно из предстоящих событий.' . PHP_EOL;
+            $reply .= 'Выберите одно из событий, нажав кнопку';
+            $aKeyboard = $storage->eventList();
         }
 
-        $reply .= getMessagesBlock($storage, isAdmin($nickName));
         $telegram->sendMessage([
             'chat_id' => $chatId,
             'text' => $reply,
             'parse_mode'=> 'HTML',
             'reply_markup' => $telegram->replyKeyboardMarkup([
                 'keyboard' => $aKeyboard,
-                'resize_keyboard' => true,
-                'one_time_keyboard' => false,
+                'resize_keyboard' => false,
+                'one_time_keyboard' => true,
             ])
         ]);
 
@@ -200,13 +216,13 @@ if($text){
         if (strlen($eventString) > 0) {
             $eventData = $storage->eventGet($eventString);
 
-            $eventTimeStart = $eventData['data']['start'];
-            $eventTimeEnd = $eventData['data']['end'];
+            $eventTimeStart = $eventData['start'];
+            $eventTimeEnd = $eventData['end'];
 
             if (time() < strtotime($eventTimeStart)) {
-                $reply .= '"' . $eventString . '" ещё не наступил.';
-                $reply .= ' Событие начнётся через ' . date_difference(date('d.m.Y H:i:s'), $eventTimeStart);
-                $reply .= ' Мы пришлём вам уведомление, когда оно начнётся.';
+                $reply .= '"' . $eventString . '" ещё не наступил.' . PHP_EOL;
+                $reply .= 'Начало через ' . date_difference(date('d.m.Y H:i:s'), $eventTimeStart) . PHP_EOL;
+                $reply .= 'Мы пришлём вам уведомление, когда событие начнётся.';
             } elseif (time() > strtotime($eventTimeEnd)) {
                 $reply .= '' . $eventString . '  уже закончился.';
                 // Отменить регистрацию пользователя?
@@ -219,30 +235,28 @@ if($text){
                     if (count($aSecondRecord) > 0) {
                         $reply .= 'Данные добавлены.' . PHP_EOL;
                         $reply .= getDeltaBlock($aLastData, $aFirstRecord['data']);
-                        $reply .= getMessagesBlock($storage, isAdmin($nickName));
                     } else {
                         $reply .= 'Данные сохранены.' . PHP_EOL;
-                        $reply .= getMessagesBlock($storage, isAdmin($nickName));
                     }
                 } catch (Exception $e) {
                     $reply .= 'Ошибка: Данные не могут быть распознаны. ';
                     $reply .= 'Необходимо отправлять боту статистику ЗА ВСЁ ВРЕМЯ';
                 }
             }
-            $reply .= getMessagesBlock($storage, isAdmin($nickName));
         } else {
-            $reply .= 'Вы не заегистрированы. Зарегистрируйтесь на одно из событий.';
-            $reply .= getMessagesBlock($storage, isAdmin($nickName));
+            $reply .= 'Вы не зарегистрированы.' . PHP_EOL;
+            $reply .= 'Зарегистрируйтесь на одно из событий используя кнопку ниже.';
+            $aKeyboard = $storage->eventList();
         }
 
         $telegram->sendMessage([
             'chat_id' => $chatId,
             'text' => $reply,
-            //'parse_mode'=> 'HTML',
+            'parse_mode'=> 'HTML',
             'reply_markup' => $telegram->replyKeyboardMarkup([
                 'keyboard' => $aKeyboard,
-                'resize_keyboard' => true,
-                'one_time_keyboard' => false,
+                'resize_keyboard' => false,
+                'one_time_keyboard' => true,
             ])
         ]);
 
@@ -262,12 +276,14 @@ if($text){
                     for ($i=3; $i<count($aParams); $i++) {
                         $aAdmins[] = $aParams[$i];
                     }
-                    $storage->eventAdd([
-                        'name' => $eventName,
-                        'start' => $start,
-                        'end' => $end,
-                        'admin' => array_unique($aAdmins),
-                    ]);
+                    $storage->eventAdd(
+                        $eventName,
+                        [
+                            'start' => $start,
+                            'end' => $end,
+                            'admin' => array_unique($aAdmins),
+                        ]
+                    );
                     $storage->setEventName($eventName);
                     $storage->setMessage(
                         'Начат ' . $eventName . PHP_EOL .
@@ -305,15 +321,14 @@ if($text){
             $reply = 'Действие доступно только для администраторов';
         }
 
-        $reply .= getMessagesBlock($storage, isAdmin($nickName));
         $telegram->sendMessage([
             'chat_id' => $chatId,
             'text' => $reply,
             'parse_mode'=> 'HTML',
             'reply_markup' => $telegram->replyKeyboardMarkup([
                 'keyboard' => $aKeyboard,
-                'resize_keyboard' => true,
-                'one_time_keyboard' => false,
+                'resize_keyboard' => false,
+                'one_time_keyboard' => true,
             ])
         ]);
     } else if (preg_match('/^Сообщение\s(.+)/ui', $text, $regs)) {
@@ -331,15 +346,14 @@ if($text){
             }
         }
 
-        $reply .= getMessagesBlock($storage, isAdmin($nickName));
         $telegram->sendMessage([
             'chat_id' => $chatId,
             'text' => $reply,
             'parse_mode'=> 'HTML',
             'reply_markup' => $telegram->replyKeyboardMarkup([
                 'keyboard' => $aKeyboard,
-                'resize_keyboard' => true,
-                'one_time_keyboard' => false,
+                'resize_keyboard' => false,
+                'one_time_keyboard' => true,
             ])
         ]);
     } else if (mb_strtolower($text,'UTF-8') == "сообщения очистить") {
@@ -354,8 +368,8 @@ if($text){
             //'parse_mode'=> 'HTML',
             'reply_markup' => $telegram->replyKeyboardMarkup([
                 'keyboard' => $aKeyboard,
-                'resize_keyboard' => true,
-                'one_time_keyboard' => false,
+                'resize_keyboard' => false,
+                'one_time_keyboard' => true,
             ])
         ]);
 
@@ -370,7 +384,8 @@ if($text){
                 'firstName' => $result['message']['from']['first_name'],
                 'chatId' => $result['message']['chat']['id'],
               ]);
-            $reply = "Вы успешно зарегистрировались на событие \"<b>".$text."</b>\".";
+            $reply  .= "Вы успешно зарегистрировались на \"<b>".$text."</b>\".";
+            $reply  .= "Мы уведомим вас, когда оно начнётся.";
 
         } else {
             $reply = "По запросу \"<b>".$text."</b>\" ничего не найдено.";
@@ -381,8 +396,8 @@ if($text){
             'parse_mode'=> 'HTML',
             'reply_markup' => $telegram->replyKeyboardMarkup([
                 'keyboard' => $aKeyboard,
-                'resize_keyboard' => true,
-                'one_time_keyboard' => false,
+                'resize_keyboard' => false,
+                'one_time_keyboard' => true,
             ])
         ]);
     }
@@ -394,30 +409,12 @@ if($text){
         //'parse_mode'=> 'HTML',
         'reply_markup' => $telegram->replyKeyboardMarkup([
             'keyboard' => $aKeyboard,
-            'resize_keyboard' => true,
-            'one_time_keyboard' => false,
+            'resize_keyboard' => false,
+            'one_time_keyboard' => true,
         ])
     ]);
 }
 $logger->log('Ответ бота: ' . $reply);
-
-function getMessagesBlock(Storage $storage, $isAdmin=false)
-{
-    $reply = '';
-    $aMessages = $storage->getMessages();
-    if (count($aMessages) > 0) {
-        $reply .= PHP_EOL . 'Сообщения:' . PHP_EOL;
-        foreach ($aMessages as $key => $value) {
-            if ($isAdmin) {
-                $reply .= ' [' . $key . ']: ';
-            } else {
-                $reply .= ' - ';
-            }
-            $reply .= $value . PHP_EOL;
-        }
-    }
-    return $reply;
-}
 
 function getDeltaBlock(array $aNewData, array $aOldData)
 {

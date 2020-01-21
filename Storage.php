@@ -38,7 +38,7 @@ class Storage
      */
     public function getMessages($fullData=false)
     {
-        $sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$messagesFile;
+        $sFilename = self::$dataDir . self::$messagesFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aMessages = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
 
@@ -67,8 +67,8 @@ class Storage
      */
     public function setMessage($sMessage, $when='', array $aParams=[])
     {
-        //$sFilename = self::$dataDir . self::$messagesFile;
-        $sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$messagesFile;
+        //$sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$messagesFile;
+        $sFilename = self::$dataDir . self::$messagesFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aMessages = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         $iId = 0;
@@ -102,7 +102,8 @@ class Storage
      */
     public function deleteMessage($msgId)
     {
-        $sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$messagesFile;
+        //$sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$messagesFile;
+        $sFilename = self::$dataDir . self::$messagesFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aMessages = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         unset ($aMessages[$msgId]);
@@ -238,7 +239,7 @@ class Storage
 
         // оставить только ещё не закончившиеся события
         foreach ($aAllData as $eventName => $aData) {
-            $dateEnd = $aAllData[$eventName]['data']['end'];
+            $dateEnd = $aAllData[$eventName]['end'];
             if (time() >= strtotime($dateEnd)) {
                 unset ($aAllData[$eventName]);
             }
@@ -265,22 +266,24 @@ class Storage
     /**
      * Добавляет, создаёт новое событие(мероприятие)
      */
-    public function eventAdd(array $aEventData)
+    public function eventAdd($eventName, array $aEventData)
     {
-        if (!array_key_exists('name', $aEventData)) {
-            throw new Exception('Ошибка. Нет имени у события');
-        }
-        $eventName = $aEventData['name'];
-        $aEventData = [
-            'date' => date('d.m.Y'),
-            'time' => date('H:i:s'),
-            'author' => $this->username,
-            'data' => $aEventData,
-        ];
         $sFilename = self::$dataDir . self::$eventsFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
-        $aAllData[$eventName] = $aEventData;
+        //$aAllData[$eventName] = $aEventData;
+        $eventStart = array_key_exists('start', $aEventData) ? $aEventData['start'] : date('d.m.Y H:i:s');
+        // Продолжительность по-умолчанию 2 часа
+        $eventEnd = array_key_exists('end', $aEventData) ? $aEventData['end'] : date('d.m.Y H:i:s', strtotime($eventStart) + 7200);
+        $aAllData[$eventName] = [
+            'name' => $eventName,
+            'start' => $eventStart,
+            'end' => $eventEnd,
+            'admins' => array_key_exists('admin', $aEventData) ? $aEventData['admin'] : [$this->username],
+            'date' => date('d.m.Y H:i:s'),
+            'author' => $this->username,
+
+        ];
         file_put_contents($sFilename, json_encode($aAllData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
     }
 

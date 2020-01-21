@@ -44,14 +44,14 @@ class Api
     }
     public function replyKeyboardMarkup(array $params)
     {
-        $this->logger->log('replyKeyboardMarkup(' . json_encode($params, JSON_UNESCAPED_UNICODE) . ')');
-        return json_encode([]);
+        //$this->logger->log('replyKeyboardMarkup(' . json_encode($params, JSON_UNESCAPED_UNICODE) . ')');
+        return json_encode($params, JSON_UNESCAPED_UNICODE);
 
     }
     public function sendMessage(array $params)
     {
         $this->logger->log('sendMessage(' . json_encode($params, JSON_UNESCAPED_UNICODE) . ')');
-        return json_encode([]);
+        return json_encode($params, JSON_UNESCAPED_UNICODE);
 
     }
 }

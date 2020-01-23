@@ -8,7 +8,7 @@ if (!array_key_exists('file', $_GET)) {
     die('ERROR. FILE parametre isnot specified');
 }
 $file = urldecode($_GET['file']);
-$eventName = substr($file,0, -4);
+$eventName = substr($file,0, -11);
 
 $storage = new Storage('');
 $storage->setEventName($eventName);
@@ -126,12 +126,12 @@ foreach ($aAgents as $sFraction => $aFractionAgents) {
 
 header("Content-Type:   application/vnd.ms-excel; charset=utf-8");
 header("Content-type:   application/x-msexcel; charset=utf-8");
-header("Content-Disposition: attachment; filename=result.xls");
+header("Content-Disposition: attachment; filename=" . $eventName . ".xls");
 header("Expires: 0");
 header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
 header("Cache-Control: private",false);
 
 $objWriter = \PHPExcel_IOFactory::createWriter($document, 'Excel5');
-$objWriter->save("data/result.xls");
-//$objWriter->save('php://output');
-echo file_get_contents('data/result.xls');
+//$objWriter->save("data/result.xls");
+$objWriter->save('php://output');
+//echo file_get_contents('data/result.xls');

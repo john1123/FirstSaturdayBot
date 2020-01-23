@@ -16,13 +16,15 @@ class Storage
     protected static $usersFile = 'users.json';
 
     /** папка где хранятся данные. должна быть открыта для записи! */
-    protected static $dataDir = 'data/';
+    //protected $dataDir = 'data/';
+    protected $dataDir = 'data';
 
     protected $evenName = '';
     protected $chatId;
 
     public function __construct($chatId)
     {
+        $this->dataDir = __DIR__ . DIRECTORY_SEPARATOR . $this->dataDir . DIRECTORY_SEPARATOR;
         $this->chatId = $chatId;
     }
 
@@ -36,7 +38,7 @@ class Storage
      */
     public function getMessages($fullData=false)
     {
-        $sFilename = self::$dataDir . self::$messagesFile;
+        $sFilename = $this->dataDir . self::$messagesFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aMessages = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         return $aMessages;
@@ -50,8 +52,8 @@ class Storage
      */
     public function setMessage($sMessage, $to, $from=null, array $aParams=[])
     {
-        //$sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$messagesFile;
-        $sFilename = self::$dataDir . self::$messagesFile;
+        //$sFilename = $this->dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$messagesFile;
+        $sFilename = $this->dataDir . self::$messagesFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aMessages = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         $iId = 0;
@@ -85,8 +87,8 @@ class Storage
      */
     public function deleteMessage($msgId)
     {
-        //$sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$messagesFile;
-        $sFilename = self::$dataDir . self::$messagesFile;
+        //$sFilename = $this->dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$messagesFile;
+        $sFilename = $this->dataDir . self::$messagesFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aMessages = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         unset ($aMessages[$msgId]);
@@ -100,8 +102,8 @@ class Storage
      */
     public function clearMessages()
     {
-        if (file_exists(self::$dataDir . self::$messagesFile)) {
-            rename(self::$dataDir . self::$messagesFile, self::$dataDir . 'messages_' . date('Ymd_his') . '.json');
+        if (file_exists($this->dataDir . self::$messagesFile)) {
+            rename($this->dataDir . self::$messagesFile, $this->dataDir . 'messages_' . date('Ymd_his') . '.json');
         }
 
     }
@@ -113,7 +115,7 @@ class Storage
      */
     public function clearData()
     {
-        $sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$dataFile;
+        $sFilename = $this->dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$dataFile;
 
         if (file_exists($sFilename)) {
             rename($sFilename, $sFilename . '_backup' . date('Ymd_his') . '.json');
@@ -123,7 +125,7 @@ class Storage
     public function getAllData()
     {
         $aAllData = [];
-        $sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$dataFile;
+        $sFilename = $this->dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$dataFile;
         if (file_exists($sFilename)) {
             $sContents = @file_get_contents($sFilename);
             $aAllData = strlen($sContents) > 0 ? (array)json_decode($sContents, true) : [];
@@ -140,7 +142,7 @@ class Storage
     public function getAgentData($recordId=0)
     {
         $aAgentData = [];
-        $sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$dataFile;
+        $sFilename = $this->dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$dataFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         if (count($aAllData) > 0) {
@@ -165,7 +167,7 @@ class Storage
             'time' => date('d.m.Y H:i:s'), // $aAgentData['Time (hh:mm:ss)'],
             'data' => $aAgentData,
         ];
-        $sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$dataFile;
+        $sFilename = $this->dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$dataFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         $aStoredAgentData = array_key_exists($this->chatId, $aAllData) ? $aAllData[$this->chatId] : [];
@@ -186,7 +188,7 @@ class Storage
      */
     public function deleteAgentData($bLastOnly=true)
     {
-        $sFilename = self::$dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$dataFile;
+        $sFilename = $this->dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$dataFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         if ($bLastOnly) {
@@ -211,7 +213,7 @@ class Storage
     public function eventGet($eventName)
     {
         $aData = [];
-        $sFilename = self::$dataDir . self::$eventsFile;
+        $sFilename = $this->dataDir . self::$eventsFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         if (array_key_exists($eventName, $aAllData)) {
@@ -226,7 +228,7 @@ class Storage
      */
     public function eventList($fullData=false)
     {
-        $sFilename = self::$dataDir . self::$eventsFile;
+        $sFilename = $this->dataDir . self::$eventsFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
 
@@ -246,7 +248,7 @@ class Storage
      */
     public function eventDelete($eventName)
     {
-        $sFilename = self::$dataDir . self::$eventsFile;
+        $sFilename = $this->dataDir . self::$eventsFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aEvents = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         if (!array_key_exists($eventName, $aEvents)) {
@@ -261,7 +263,7 @@ class Storage
      */
     public function eventAdd($eventName, array $aEventData)
     {
-        $sFilename = self::$dataDir . self::$eventsFile;
+        $sFilename = $this->dataDir . self::$eventsFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         //$aAllData[$eventName] = $aEventData;
@@ -285,7 +287,7 @@ class Storage
      */
     public function isAdmin($eventname, $nickname='')
     {
-        $sFilename = self::$dataDir . self::$eventsFile;
+        $sFilename = $this->dataDir . self::$eventsFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         if (array_key_exists($eventname, $aAllData)) {
@@ -300,7 +302,7 @@ class Storage
      */
     public function userRegister($eventName, $chatId, $aUserData)
     {
-        $sFilename = self::$dataDir . self::$usersFile;
+        $sFilename = $this->dataDir . self::$usersFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
 
@@ -315,7 +317,7 @@ class Storage
      */
     public function userUnregister($eventName, $chatId)
     {
-        $sFilename = self::$dataDir . self::$usersFile;
+        $sFilename = $this->dataDir . self::$usersFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         if (array_key_exists($eventName, $aAllData) && array_key_exists($chatId, $aAllData[$eventName])) {
@@ -330,7 +332,7 @@ class Storage
      */
     public function userGetRegistration($chatId, $eventName='')
     {
-        $sFilename = self::$dataDir . self::$usersFile;
+        $sFilename = $this->dataDir . self::$usersFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         if (strlen($eventName) > 0 && array_key_exists($eventName, $aAllData) && array_key_exists($chatId, $aAllData[$eventName])) {
@@ -350,7 +352,7 @@ class Storage
      */
     public function userReset($chatId)
     {
-        $sFilename = self::$dataDir . self::$usersFile;
+        $sFilename = $this->dataDir . self::$usersFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
 
@@ -363,7 +365,7 @@ class Storage
     public function userList($eventName='')
     {
         $aUserList = [];
-        $sFilename = self::$dataDir . self::$usersFile;
+        $sFilename = $this->dataDir . self::$usersFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
 

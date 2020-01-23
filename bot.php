@@ -300,6 +300,9 @@ if($text){
             $reply = 'Действие доступно только для администраторов';
         }
 
+        if (strlen($eventString) < 1) {
+            $aKeyboard = [[]];
+        }
         sendTelegramMessage($chatId, $reply, $aKeyboard);
 
 
@@ -467,9 +470,9 @@ function getMarkup($aKeyboard) {
         'one_time_keyboard' => true,
     ]);
 }
-function sendTelegramMessage($chatId, $message, array $aKeyboard=[]) {
+function sendTelegramMessage($chatId, $message, array $aKeyboard=[[]]) {
     global $telegram;
-    if (count($aKeyboard) > 0) {
+    if (count($aKeyboard[0]) > 0) {
         return $telegram->sendMessage([
             'chat_id' => $chatId,
             'text' => $message,

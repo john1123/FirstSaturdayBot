@@ -22,7 +22,8 @@ $telegram = new Api(TELEGRAM_BOT_TOKEN);
 //$result = $telegram -> getWebhookUpdates('SimferopolFS - Тест');
 //$result = $telegram -> getWebhookUpdates($morkwa2);
 //$result = $telegram -> getWebhookUpdates('Результаты');
-$result = $telegram -> getWebhookUpdates('Участники');
+//$result = $telegram -> getWebhookUpdates('Участники');
+//$result = $telegram -> getWebhookUpdates('Помощь');
 
 $text = @$result["message"]["text"];
 $chatId = @$result["message"]["chat"]["id"];
@@ -166,23 +167,22 @@ if($text){
     // -- ПОМОЩЬ
     } else if (mb_strtolower($text,'UTF-8') == "помощь") {
         $reply  = 'Бот предназначен для отслеживания и учёта изменений игроков Ingress. Для работы нужно в игре скопировать данные профиля в Ingress Prime и как есть отправить их боту.' . PHP_EOL;
-        $reply .= 'Доступны следующие команды:' . PHP_EOL;
-        $reply .= '<b>Начать</b> - ' . PHP_EOL;
-        $reply .= '<b>Состояние</b> - ' . PHP_EOL;
+        $reply .= 'Доступны следующие команды:' . PHP_EOL . PHP_EOL;
+        $reply .= '<b>Начать</b> - Отменить регистрацию на событие и начать всё заново.' . PHP_EOL;
+        $reply .= '<b>Состояние</b> - Текущее состояние. Зарегистрированы ли вы? Идёт ли событие и т.п.' . PHP_EOL;
         $reply .= '<b>Помощь</b> - Краткое описание команд. Этот текст.' . PHP_EOL;
 
-        $reply .= '<b>Участники</b> - ' . PHP_EOL;
-        $reply .= '<b>Результаты</b> - ' . PHP_EOL;
-        $reply .= '<b>Событие (создать|удалить)</b> - ' . PHP_EOL;
-//        $reply .= 'Исходный код доступен по адресу https://github.com/john1123/FirstSaturdayBot/' . PHP_EOL;
-//
-//        $reply .= PHP_EOL . 'Доступны следующие команды:' . PHP_EOL;
-//        $reply .= '<b>Начать</b> - Удалить все запомненные ранее данные (если они были) и начать всё заново. Поаккуратней с ней :)' . PHP_EOL;
-//
-//        if (isAdmin($nickName)) {
-//            $reply .= PHP_EOL . 'Команды администратора:' . PHP_EOL;
-//            $reply .= '<b>Результаты</b> - Скачать xls-файл с результатами всех игроков' . PHP_EOL;
-//        }
+        if (isAdmin($nickName)) {
+            $reply .= PHP_EOL;
+            $reply .= 'Команды администратора:' . PHP_EOL;
+            $reply .= '<b>Участники</b> - Список участников события скидывавших статистику. В скобках - сколько раз.' . PHP_EOL;
+            $reply .= '<b>Результаты</b> - Загрузить результаты всех участников события собранные в xls-файл' . PHP_EOL;
+            $reply .= '<b>Событие (создать|удалить)</b> - Создать или удалить новое событие. Имеет формат <i>Событие создать "Название события" ДатаНачала ВремяНачала ВремяКонца</i>. Например "Событие создать "SimferopolFS - Тест" 23.01.2020 10:00 21:00"' . PHP_EOL;
+        }
+
+        $reply .= PHP_EOL;
+        $reply .= 'Автор бота MorKwa E15 @MokKwa' . PHP_EOL;
+        $reply .= 'Исходный код доступен по адресу https://github.com/john1123/FirstSaturdayBot/' . PHP_EOL;
 
         sendTelegramMessage($chatId, $reply, $aKeyboard);
 
@@ -357,8 +357,19 @@ if($text){
                 'firstName' => $result['message']['from']['first_name'],
                 'chatId' => $result['message']['chat']['id'],
               ]);
+            $eventString = $text;
+
             $reply  .= "Вы успешно зарегистрировались на \"<b>".$text."</b>\"." . PHP_EOL;
-            $reply  .= "Мы уведомим вас, когда событие начнётся.";
+            $aEventData = $storage->eventGet($eventString);
+            if (time() < strtotime($aEventData['start'])) {
+                $reply  .= "Мы уведомим вас, когда событие начнётся." . PHP_EOL;
+            } elseif (time() > strtotime($aEventData['end'])) {
+                $reply  .= "Событие уже закончилось!." . PHP_EOL;
+            } else {
+                $reply  .= "Событие идёт в настоящее время!" . PHP_EOL;
+                $reply  .= "Скиньте боту вашу статистику." . PHP_EOL;
+            }
+
 
         } else {
             $reply = "По запросу \"<b>".$text."</b>\" ничего не найдено.";

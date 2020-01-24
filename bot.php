@@ -1,10 +1,11 @@
 <?php
+date_default_timezone_set('Europe/Moscow');
 
 /** Токен, полученный у @BotFather */
 define('TELEGRAM_BOT_TOKEN', '792434518:AAFilIOmSe0FiH2lIW3ieWLSKnY0Tz4epTo');
 
-include('test.php');include('TestApi.php');include('vendor/john1123/logger/src/File.php');
-//include('vendor/autoload.php');
+//include('test.php');include('TestApi.php');include('vendor/john1123/logger/src/File.php');
+include('vendor/autoload.php');
 include('IngressProfile.php');
 include('Storage.php');
 
@@ -14,13 +15,13 @@ use John1123\Logger\File as Logger;
 $logger = new Logger(__DIR__ . '/data/bot_' . date('Ymd') . '.log');
 
 $telegram = new Api(TELEGRAM_BOT_TOKEN);
-//$result = $telegram -> getWebhookUpdates();
+$result = $telegram -> getWebhookUpdates();
 //$result = $telegram -> getWebhookUpdates('Начать');
 //$result = $telegram -> getWebhookUpdates('Состояние');
-//$result = $telegram -> getWebhookUpdates('Событие создать "SimferopolFS - Тест" 23.01.2020 10:00 21:00');
+//$result = $telegram -> getWebhookUpdates('Событие создать "IngressFS - Simferopol - February 2020" 24.01.2020 10:00 21:00');
 //$result = $telegram -> getWebhookUpdates('Событие удалить Simferopol FS1');
-//$result = $telegram -> getWebhookUpdates('SimferopolFS - Тест');
-//$result = $telegram -> getWebhookUpdates($morkwa2);
+//$result = $telegram -> getWebhookUpdates('IngressFS - Simferopol - February 2020');
+//$result = $telegram -> getWebhookUpdates($morkwa1);
 //$result = $telegram -> getWebhookUpdates('Результаты');
 //$result = $telegram -> getWebhookUpdates('Участники');
 //$result = $telegram -> getWebhookUpdates('Помощь');
@@ -68,9 +69,9 @@ if (strlen($eventString) > 0) {
     $storage->setEventName($eventString);
 }
 $aFirstRecord = $storage->getAgentData(0);
-if (count($aFirstRecord) < 1) {
-    array_unshift($aKeyboard, ['Начать']);
-}
+//if (count($aFirstRecord) < 1) {
+//    array_unshift($aKeyboard, ['Начать']);
+//}
 // Добавляем команды админу
 if (strlen($eventString) > 0 && isAdmin($nickName)) {
     array_unshift($aKeyboard, ['Результаты']);
@@ -238,9 +239,9 @@ if($text){
     } else if (preg_match('/^Событие\s+(создать|удалить)\s+(.+)$/ui', $text, $regs)) {
         if (isAdmin($nickName) == true) {
             $eventAction = mb_strtolower($regs[1]);
-            $eventString   = trim($regs[2]);
+            $eventName   = trim($regs[2]);
             if ($eventAction == 'создать') {
-                if (preg_match('/^(?:[\'"]([^\'"]+)[\'"]|(\w+))\s*(.+)$/m', $eventString, $regs)) {
+                if (preg_match('/^(?:[\'"]([^\'"]+)[\'"]|(\w+))\s*(.+)$/m', $eventName, $regs)) {
                     $eventName = strlen($regs[1]) > 0 ? $regs[1] : $regs[2];
                     $aParams = explode(' ', $regs[3]);
                     $start = $aParams[0] . ' ' . $aParams[1];
@@ -333,7 +334,11 @@ if($text){
                         $reply .= 'Данные добавлены.' . PHP_EOL;
                         $reply .= getDeltaBlock($aLastData, $aFirstRecord['data']);
                     } else {
-                        $reply .= 'Данные сохранены.' . PHP_EOL;
+                        $reply .= 'Полученные данные:' . PHP_EOL;
+                        foreach($aLastData as $key => $value) {
+                            $reply .= '  - ' . $key . ': ' . (is_int($value) ? number_format($value, 0, ',', '.') : $value) . PHP_EOL;
+                        }
+                        $reply .= PHP_EOL . 'Данные сохранены.' . PHP_EOL;
                     }
                 } catch (Exception $e) {
                     $reply .= 'Ошибка: Данные не могут быть распознаны. ';
@@ -381,7 +386,7 @@ if($text){
     }
 } else {
     $reply = "Отправьте текстовое сообщение.";
-    sendTelegramMessage($chatId, $reply, $aKeyboard);
+    sendTelegramMessage($chatId, '10'.$reply, $aKeyboard);
 }
 $logger->log('Ответ бота: ' . $reply);
 
@@ -418,6 +423,7 @@ function isAdmin($eventname='', $nickname='')
 
     /** @var $aAdmins array - Ники из этого списка всегда будут админскими */
     $aAdmins = [
+        'MorKwa',
         'testNickname', // telegram nicknames without @
     ];
 

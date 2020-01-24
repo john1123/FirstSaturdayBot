@@ -124,7 +124,6 @@ if($text){
                 $reply .= 'Уже окончен ' . $eventString . PHP_EOL;
                 $reply .= 'С окончания прошло ' . date_difference(date('d.m.Y H:i:s'), $aEventData['end']);
             } else {
-                //$reply .= 'Вы зарегистрированы на событие "' . $eventString . '". ';
                 $reply .= 'Сейчас проходит "' . $eventString . '".' . PHP_EOL;
                 $reply .= 'Вы можете отправлять статистику боту, обновляя ваш результат.' . PHP_EOL;
 
@@ -178,11 +177,11 @@ if($text){
             $reply .= 'Команды администратора:' . PHP_EOL;
             $reply .= '<b>Участники</b> - Список участников события скидывавших статистику. В скобках - сколько раз.' . PHP_EOL;
             $reply .= '<b>Результаты</b> - Загрузить результаты всех участников события собранные в xls-файл' . PHP_EOL;
-            $reply .= '<b>Событие (создать|удалить)</b> - Создать или удалить новое событие. Имеет формат <i>Событие создать "Название события" ДатаНачала ВремяНачала ВремяКонца</i>. Например "Событие создать "SimferopolFS - Тест" 23.01.2020 10:00 21:00"' . PHP_EOL;
+            $reply .= '<b>Событие (создать|удалить)</b> - Создать или удалить новое событие. Имеет формат <i>Событие создать "Название события" ДатаНачала ВремяНачала ВремяКонца</i>. Например "Событие создать "SimferopolFS - Тест" 23.01.2020 10:00 21:00" или "Событие удалить НазваниеСобытия"' . PHP_EOL;
         }
 
         $reply .= PHP_EOL;
-        $reply .= 'Автор бота MorKwa E15 @MokKwa' . PHP_EOL;
+        $reply .= 'Автор бота MorKwa E15 @MorKwa' . PHP_EOL;
         $reply .= 'Исходный код доступен по адресу https://github.com/john1123/FirstSaturdayBot/' . PHP_EOL;
 
         sendTelegramMessage($chatId, $reply, $aKeyboard);
@@ -220,11 +219,11 @@ if($text){
         if (isAdmin($nickName) == true) {
             $telegram->sendDocument([
                 'chat_id' => $chatId,
-                // result.xls в конце строки добавлен для того, чтобы телеграм видел в конце строки файл эксель.
                 // Вроде как без этого не заработает (не уверен)
                 'document' => 'https://'
                     . $_SERVER['SERVER_NAME']
                     . str_replace('bot.php', 'result.php', $_SERVER['SCRIPT_NAME'])
+                    // result.xls в конце строки добавлен для того, чтобы телеграм видел в конце строки файл эксель.
                     . '?file=' . urlencode($eventString) . '/result.xls',
                 'caption' => 'Файл с результатами',
             ]);
@@ -266,7 +265,6 @@ if($text){
                         $fullUser,
                         ['when' => $start]
                     );
-
                     $storage->setMessage(
                         'Осталось 10 минут до конца ' . $eventName . PHP_EOL .
                         'Взломайте любой портал и отправьте боту статистику.',

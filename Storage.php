@@ -186,9 +186,10 @@ class Storage
      * @param boolean $bLastOnly Удалить только последнюю запись? Если true - самые первые данные не удалятся. Если false - удалится всё. 
      * @return void
      */
-    public function deleteAgentData($bLastOnly=true)
+    public function deleteAgentData($bLastOnly=true, $eventName='')
     {
-        $sFilename = $this->dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$dataFile;
+        $eventName = strlen($eventName < 1) ? $this->evenName : $eventName;
+        $sFilename = $this->dataDir . date('Y-m') . '_' . $this->translit($eventName) . '_' . self::$dataFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         if ($bLastOnly) {
@@ -202,9 +203,7 @@ class Storage
                 unset ($aAllData[$this->chatId]);
             }
         }
-        if (count($aAllData) > 0) {
-            file_put_contents($sFilename, json_encode($aAllData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
-        }
+        file_put_contents($sFilename, json_encode($aAllData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
     }
 
     /**
@@ -317,6 +316,7 @@ class Storage
      */
     public function userUnregister($eventName, $chatId)
     {
+        $this->deleteAgentData(false, $eventName);
         $sFilename = $this->dataDir . self::$usersFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];

@@ -36,7 +36,7 @@ $sheet->getDefaultStyle()->applyFromArray(array(
 $startColId = $colId = 0; // Начальная координата x
 $startRowId = $rowId = 1; // Начальная координата y
 
-$document->getActiveSheet()->setTitle("Результаты FS");
+$document->getActiveSheet()->setTitle("Результаты " . $eventName);
 
 $i1 = $startColId + 2;
 $i2 = $i1 + count(IngressProfile::$aDeltaKeys);
@@ -81,12 +81,12 @@ for ($i=0; $i<3; $i++) {
 $rowId++;
 $colId = $startColId;
 
-foreach ($aAgents as $sFraction => $aFractionAgents) {
-    $styleId = $sFraction == 'Resistance' ? 'res' : 'enl';
-    foreach ($aFractionAgents as $sAgentName => $aRecord) {
+foreach ($aAgents as $sFaction => $aFactionAgents) {
+    //$styleId = $sFaction == 'Resistance' ? 'res' : 'enl';
+    foreach ($aFactionAgents as $sAgentName => $aRecord) {
 
         $sheet->setCellValueByColumnAndRow($colId++, $rowId, $sAgentName);
-        $sheet->setCellValueByColumnAndRow($colId++, $rowId, $sFraction);
+        $sheet->setCellValueByColumnAndRow($colId++, $rowId, $sFaction);
 
         $sDatetime = strtotime($aRecord[0]['data']['Date (yyyy-mm-dd)'] . ' ' . $aRecord[0]['data']['Time (hh:mm:ss)']);
         $sheet->setCellValueByColumnAndRow($colId++, $rowId, date('d.m.Y h:i:s', $sDatetime));
@@ -94,29 +94,31 @@ foreach ($aAgents as $sFraction => $aFractionAgents) {
             $sheet->setCellValueByColumnAndRow($colId++, $rowId, $aRecord[0]['data'][$value]);
         }
 
-        $sDatetime = strtotime($aRecord[1]['data']['Date (yyyy-mm-dd)'] . ' ' . $aRecord[1]['data']['Time (hh:mm:ss)']);
-        $sheet->setCellValueByColumnAndRow($colId++, $rowId, date('d.m.Y h:i:s', $sDatetime));
-        foreach (IngressProfile::$aDeltaKeys as $key => $value) {
-            $sheet->setCellValueByColumnAndRow($colId++, $rowId, $aRecord[1]['data'][$value]);
-        }
+        if (count($aRecord[1]) > 0) {
+            $sDatetime = strtotime($aRecord[1]['data']['Date (yyyy-mm-dd)'] . ' ' . $aRecord[1]['data']['Time (hh:mm:ss)']);
+            $sheet->setCellValueByColumnAndRow($colId++, $rowId, date('d.m.Y h:i:s', $sDatetime));
+            foreach (IngressProfile::$aDeltaKeys as $key => $value) {
+                $sheet->setCellValueByColumnAndRow($colId++, $rowId, $aRecord[1]['data'][$value]);
+            }
 
-        $aDiff = [];
-        $start_date = new DateTime($aRecord[0]['data']['Date (yyyy-mm-dd)'] . ' ' . $aRecord[0]['data']['Time (hh:mm:ss)']);
-        $since_start = $start_date->diff(new DateTime($aRecord[1]['data']['Date (yyyy-mm-dd)'] . ' ' . $aRecord[1]['data']['Time (hh:mm:ss)']));
-        if ($since_start->y > 0) $aDiff[] = $since_start->y . 'лет';
-        if ($since_start->m > 0) $aDiff[] = $since_start->m . 'мес';
-        if ($since_start->d > 0) $aDiff[] = $since_start->d . 'дн';
-        if ($since_start->h > 0) $aDiff[] = $since_start->h . 'час';
-        if ($since_start->i > 0) $aDiff[] = $since_start->i . 'мин';
-        if ($since_start->s > 0) $aDiff[] = $since_start->s . 'сек';
+            $aDiff = [];
+            $start_date = new DateTime($aRecord[0]['data']['Date (yyyy-mm-dd)'] . ' ' . $aRecord[0]['data']['Time (hh:mm:ss)']);
+            $since_start = $start_date->diff(new DateTime($aRecord[1]['data']['Date (yyyy-mm-dd)'] . ' ' . $aRecord[1]['data']['Time (hh:mm:ss)']));
+            if ($since_start->y > 0) $aDiff[] = $since_start->y . 'лет';
+            if ($since_start->m > 0) $aDiff[] = $since_start->m . 'мес';
+            if ($since_start->d > 0) $aDiff[] = $since_start->d . 'дн';
+            if ($since_start->h > 0) $aDiff[] = $since_start->h . 'час';
+            if ($since_start->i > 0) $aDiff[] = $since_start->i . 'мин';
+            if ($since_start->s > 0) $aDiff[] = $since_start->s . 'сек';
 
-        $sDiff = count($aDiff) > 0 ? implode(', ', $aDiff) : 'отсутствует';
-        $sheet->setCellValueByColumnAndRow($colId++, $rowId, $sDiff);
+            $sDiff = count($aDiff) > 0 ? implode(', ', $aDiff) : 'отсутствует';
+            $sheet->setCellValueByColumnAndRow($colId++, $rowId, $sDiff);
 
-        $profile = new IngressProfile($aRecord[0]['data']);
-        $aDelta = $profile->getDelta($aRecord[1]['data']);
-        foreach (IngressProfile::$aDeltaKeys as $key => $value) {
-            $sheet->setCellValueByColumnAndRow($colId++, $rowId, (array_key_exists($value, $aDelta) ? $aDelta[$value] : 0));
+            $profile = new IngressProfile($aRecord[0]['data']);
+            $aDelta = $profile->getDelta($aRecord[1]['data']);
+            foreach (IngressProfile::$aDeltaKeys as $key => $value) {
+                $sheet->setCellValueByColumnAndRow($colId++, $rowId, (array_key_exists($value, $aDelta) ? $aDelta[$value] : 0));
+            }
         }
 
         $rowId++;

@@ -208,12 +208,12 @@ if($text){
                 }
             }
         } else {
-            $reply = 'Недостаточно прав' . PHP_EOL;
-            sendTelegramMessage($chatId, $reply, $aKeyboard);
+            $reply .= 'Недостаточно прав' . PHP_EOL;
         }
+        sendTelegramMessage($chatId, $reply, $aKeyboard);
 
 
-    //
+        //
     // --РЕЗУЛЬТАТЫ
     } else if (mb_strtolower($text,'UTF-8') == "результаты") {
         if (isAdmin($nickName) == true) {
@@ -259,14 +259,14 @@ if($text){
                     );
                     $storage->setEventName($eventName);
                     $storage->setMessage(
-                        'Начат ' . $eventName . PHP_EOL .
+                        'Начат <b>' . $eventName . '</b>.' . PHP_EOL . PHP_EOL .
                         'Не забудьте взломать стартовый портал и прислать боту статистику.',
                         'group:' . $eventName,
                         $fullUser,
                         ['when' => $start]
                     );
                     $storage->setMessage(
-                        'Осталось 10 минут до конца ' . $eventName . PHP_EOL .
+                        'Осталось 10 минут до конца <b>' . $eventName . '</b>.' . PHP_EOL . PHP_EOL .
                         'Взломайте любой портал и отправьте боту статистику.',
                         'group:' . $eventName,
                         $fullUser,
@@ -274,7 +274,7 @@ if($text){
 
                     );
                     $storage->setMessage(
-                        'Окончен ' . $eventName . PHP_EOL .
+                        'Окончен <b>' . $eventName . '</b>.' . PHP_EOL . PHP_EOL .
                         'Статистика больше не принимается.',
                         'group:' . $eventName,
                         $fullUser,

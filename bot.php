@@ -232,23 +232,28 @@ if($text){
     // --РЕЗУЛЬТАТЫ
     } else if (mb_strtolower($text,'UTF-8') == "результаты") {
         if (isAdmin($nickName) == true) {
-            $telegram->sendDocument([
-                'chat_id' => $chatId,
-                // Вроде как без этого не заработает (не уверен)
-                'document' => 'https://'
-                    . $_SERVER['SERVER_NAME']
-                    . str_replace('bot.php', 'result.php', $_SERVER['SCRIPT_NAME'])
-                    // result.xls в конце строки добавлен для того, чтобы телеграм видел в конце строки файл эксель.
-                    . '?file=' . urlencode($eventString) . '/result.xls',
-                'caption' => 'Файл с результатами',
-            ]);
+            $aAllData = $storage->getAllData();
+            if (count($aAllData) > 0) {
+                $telegram->sendDocument([
+                    'chat_id' => $chatId,
+                    'document' => 'https://'
+                        . $_SERVER['SERVER_NAME']
+                        . str_replace('bot.php', 'result.php', $_SERVER['SCRIPT_NAME'])
+                        // result.xls в конце строки добавлен для того, чтобы телеграм видел в конце строки файл эксель.
+                        . '?file=' . urlencode($eventString) . '/result.xls',
+                    'caption' => 'Файл с результатами',
+                ]);
+            } else {
+                $reply .= 'Событие "<b>' . $eventString . '</b>".' . PHP_EOL;
+                $reply = 'Файл с результатами пуст' . PHP_EOL;
+            }
         } else {
             $reply = 'Недостаточно прав' . PHP_EOL;
-            sendTelegramMessage($chatId, $reply, $aKeyboard);
         }
+        sendTelegramMessage($chatId, $reply, $aKeyboard);
 
 
-    //
+        //
     // Создание-удаление события
     } else if (preg_match('/^Событие\s+(создать|удалить)\s+(.+)$/ui', $text, $regs)) {
         if (isAdmin($nickName) == true) {
@@ -432,7 +437,7 @@ function getDeltaBlock(array $aNewData, array $aOldData)
  */
 function isAdmin($eventname='', $nickname='')
 {
-    //return true; // DEBUG: все и везде админы!
+    return true; // DEBUG: все и везде админы!
 
     /** @var $aAdmins array - Ники из этого списка всегда будут админскими */
     $aAdmins = [

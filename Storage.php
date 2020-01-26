@@ -122,10 +122,11 @@ class Storage
         }
     }
 
-    public function getAllData()
+    public function getAllData($eventName='')
     {
+        $eventName = strlen($eventName < 1) ? $this->evenName : $eventName;
         $aAllData = [];
-        $sFilename = $this->dataDir . date('Y-m') . '_' . $this->translit($this->evenName) . '_' . self::$dataFile;
+        $sFilename = $this->dataDir . date('Y-m') . '_' . $this->translit($eventName) . '_' . self::$dataFile;
         if (file_exists($sFilename)) {
             $sContents = @file_get_contents($sFilename);
             $aAllData = strlen($sContents) > 0 ? (array)json_decode($sContents, true) : [];

@@ -36,7 +36,7 @@ $sheet->getDefaultStyle()->applyFromArray(array(
 $startColId = $colId = 0; // Начальная координата x
 $startRowId = $rowId = 1; // Начальная координата y
 
-$document->getActiveSheet()->setTitle("Результаты " . $eventName);
+$document->getActiveSheet()->setTitle("Результаты");
 
 $i1 = $startColId + 2;
 $i2 = $i1 + count(IngressProfile::$aDeltaKeys);

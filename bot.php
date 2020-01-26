@@ -47,7 +47,7 @@ if (strlen($chatId) < 1) {
                 }
                 foreach ($aUserList as $msgChatId => $msgUserData) {
                     $logger->log('Cron. Сообщение: ' . $msgData['text'] . ' по адресу ' . $msgChatId);
-                    sendTelegramMessage($chatId, $reply);
+                    sendTelegramMessage($msgChatId, $msgData['text']);
                 }
                 $storage->deleteMessage($msgId);
             }
@@ -194,29 +194,32 @@ if($text){
     //
     // --УЧАСТНИКИ
     } else if (mb_strtolower($text,'UTF-8') == "участники") {
-        $userList = $storage->userList();
         $reply .= 'Участники "<b>' . $eventString . '</b>".' . PHP_EOL;
-        $reply .= 'Количество:' . count($userList) . PHP_EOL;
+        $userList = $storage->userList();
+        $reply .= 'Количество: ' . count($userList) . PHP_EOL;
         if (isAdmin($nickName) == true) {
             if (strlen($eventString) > 0) {
-                $aAllData = $storage->getAllData();
+                $aAllData = $storage->getAllData($aAllData);
                 $reply .= 'Скидывали статистику:' . PHP_EOL . PHP_EOL;
+                $aAllData = []; // TODO КАкая-то фигня. Сервер не возвращает список в цикле ниже!!!
                 if (count($aAllData) > 0) {
                     foreach ($aAllData as $chatId => $aData) {
-                        $agentName = $aAllData[$chatId][0]['data']['Agent Name'];
-                        $agentLevel = $aAllData[$chatId][0]['data']['Level'];
-                        $agentFaction = $aAllData[$chatId][0]['data']['Agent Faction'];
+                        $agentName = $aData[0]['data']['Agent Name'];
+                        $agentLevel = $aData[0]['data']['Level'];
+                        $agentFaction = $aData[0]['data']['Agent Faction'];
                         $agentFaction = $agentFaction == 'Enlightened' ? 'E' : 'R';
-                        $reply .= '- ' . $agentName . ' ' . $agentFaction . $agentLevel . ' (' . count($aData) . ')' . PHP_EOL;
+                        $sLine = '- ' . $agentName . ' ' . $agentFaction . $agentLevel . ' (' . count($aData) . ')' . PHP_EOL;
+                        $reply .= $sLine;
                     }
                 } else {
                     $reply .= 'Статистику пока не скидывали' . PHP_EOL;
                 }
             }
         }
-        sendTelegramMessage($chatId, $reply, $aKeyboard);
+        $result = sendTelegramMessage($chatId, $reply, $aKeyboard);
+        $logger->log('result='.print_r($result, true));
 
-    //
+        //
     // --ПРОФИЛЬ
     } else if (preg_match('/^Профиль\s+(.+)/sim', $text, $regs)) {
         $aProfile = IngressProfile::parseProfile($regs[1]);

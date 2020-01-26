@@ -25,6 +25,7 @@ $result = $telegram -> getWebhookUpdates();
 //$result = $telegram -> getWebhookUpdates('Результаты');
 //$result = $telegram -> getWebhookUpdates('Участники');
 //$result = $telegram -> getWebhookUpdates('Помощь');
+//$result = $telegram -> getWebhookUpdates('Профиль ' . $profile);
 
 $text = @$result["message"]["text"];
 $chatId = @$result["message"]["chat"]["id"];
@@ -118,8 +119,9 @@ if($text){
         if (strlen($eventString) > 0) {
             $aEventData = $storage->eventGet($eventString);
             if (time() < strtotime($aEventData['start'])) {
-                $reply .= 'Ждём начала ' . $eventString . PHP_EOL;
-                $reply .= 'До начала осталось ' . date_difference(date('d.m.Y H:i:s'), $aEventData['start']);
+                $reply .= 'Событие "<b>' . $eventString . '</b>"' . PHP_EOL;
+                $reply .= 'Ждём начала.' . PHP_EOL;
+                $reply .= 'Осталось ' . date_difference(date('d.m.Y H:i:s'), $aEventData['start']);
             } else if(time() > strtotime($aEventData['end'])) {
                 $reply .= 'Уже окончен ' . $eventString . PHP_EOL;
                 $reply .= 'С окончания прошло ' . date_difference(date('d.m.Y H:i:s'), $aEventData['end']);
@@ -171,13 +173,15 @@ if($text){
         $reply .= '<b>Начать</b> - Отменить регистрацию на событие и начать всё заново.' . PHP_EOL;
         $reply .= '<b>Состояние</b> - Текущее состояние. Зарегистрированы ли вы? Идёт ли событие и т.п.' . PHP_EOL;
         $reply .= '<b>Помощь</b> - Краткое описание команд. Этот текст.' . PHP_EOL;
+        $reply .= '<b>Участники</b> - Количество людей зарегистрированных на событие.' . PHP_EOL;
 
         if (isAdmin($nickName)) {
             $reply .= PHP_EOL;
             $reply .= 'Команды администратора:' . PHP_EOL;
-            $reply .= '<b>Участники</b> - Список участников события скидывавших статистику. В скобках - сколько раз.' . PHP_EOL;
+            $reply .= '<b>Участники</b> - Также показывает список участников события скидывавших статистику. В скобках - сколько раз (1-один или 2-много).' . PHP_EOL;
+            $reply .= '<b>Профиль ДанныеПрофиля</b> - Позводяет разобрать данные любого профиля (ДанныеПрофиля). Полезна при добавлении игрока в таблицу в ручном режиме.' . PHP_EOL;
             $reply .= '<b>Результаты</b> - Загрузить результаты всех участников события собранные в xls-файл' . PHP_EOL;
-            $reply .= '<b>Событие (создать|удалить)</b> - Создать или удалить новое событие. Имеет формат <i>Событие создать "Название события" ДатаНачала ВремяНачала ВремяКонца</i>. Например "Событие создать "SimferopolFS - Тест" 23.01.2020 10:00 21:00" или "Событие удалить НазваниеСобытия"' . PHP_EOL;
+            //$reply .= '<b>Событие (создать|удалить)</b> - Создать или удалить новое событие. Имеет формат <i>Событие создать "Название события" ДатаНачала ВремяНачала ВремяКонца</i>. Например "Событие создать "SimferopolFS - Тест" 23.01.2020 10:00 21:00" или "Событие удалить НазваниеСобытия"' . PHP_EOL;
         }
 
         $reply .= PHP_EOL;
@@ -191,7 +195,7 @@ if($text){
     // --УЧАСТНИКИ
     } else if (mb_strtolower($text,'UTF-8') == "участники") {
         $userList = $storage->userList();
-        $reply .= 'Участники "' . $eventString . '"' . PHP_EOL;
+        $reply .= 'Участники "<b>' . $eventString . '</b>".' . PHP_EOL;
         $reply .= 'Количество:' . count($userList) . PHP_EOL;
         if (isAdmin($nickName) == true) {
             if (strlen($eventString) > 0) {
@@ -209,6 +213,17 @@ if($text){
                     $reply .= 'Статистику пока не скидывали' . PHP_EOL;
                 }
             }
+        }
+        sendTelegramMessage($chatId, $reply, $aKeyboard);
+
+    //
+    // --ПРОФИЛЬ
+    } else if (preg_match('/^Профиль\s+(.+)/sim', $text, $regs)) {
+        $aProfile = IngressProfile::parseProfile($regs[1]);
+        $reply .= 'Агент: ' . $aProfile['Agent Name'] . PHP_EOL;
+        $reply .= 'Фракция: ' . $aProfile['Agent Faction'] . PHP_EOL;
+        foreach (IngressProfile::$aDeltaKeys as $key) {
+            $reply .= $key . ': ' . $aProfile[$key] . PHP_EOL;
         }
         sendTelegramMessage($chatId, $reply, $aKeyboard);
 

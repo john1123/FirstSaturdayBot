@@ -190,11 +190,13 @@ if($text){
     //
     // --УЧАСТНИКИ
     } else if (mb_strtolower($text,'UTF-8') == "участники") {
+        $userList = $storage->userList();
+        $reply .= 'Участники "' . $eventString . '"' . PHP_EOL;
+        $reply .= 'Количество:' . count($userList) . PHP_EOL;
         if (isAdmin($nickName) == true) {
-            //
             if (strlen($eventString) > 0) {
                 $aAllData = $storage->getAllData();
-                $reply .= 'Список участников:' . PHP_EOL . PHP_EOL;
+                $reply .= 'Скидывали статистику:' . PHP_EOL . PHP_EOL;
                 if (count($aAllData) > 0) {
                     foreach ($aAllData as $chatId => $aData) {
                         $agentName = $aAllData[$chatId][0]['data']['Agent Name'];
@@ -204,11 +206,9 @@ if($text){
                         $reply .= '- ' . $agentName . ' ' . $agentFaction . $agentLevel . ' (' . count($aData) . ')' . PHP_EOL;
                     }
                 } else {
-                    $reply .= 'Участников пока нет' . PHP_EOL;
+                    $reply .= 'Статистику пока не скидывали' . PHP_EOL;
                 }
             }
-        } else {
-            $reply .= 'Недостаточно прав' . PHP_EOL;
         }
         sendTelegramMessage($chatId, $reply, $aKeyboard);
 

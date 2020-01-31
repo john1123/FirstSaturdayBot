@@ -198,25 +198,23 @@ if($text){
         $aUserList = $storage->userList();
         $reply .= 'Заявки: ' . count($aUserList) . PHP_EOL;
         foreach ($aUserList as $aUser) {
-            $nickName = strlen($aUser['nickName'])  > 0 ? (' [@' . $aUser['nickName'] . ']') : '';
-            $username = preg_replace('/[^a-zA-ZА-Яа-я0-9\s\(\)]/u', '?', $aUser['firstName']);
-            //$username = strlen($username) !== 0 ? $username : '?';
-            $reply .= '- ' . $username . $nickName . PHP_EOL;
+            $nn = strlen($aUser['nickName'])  > 0 ? (' [@' . $aUser['nickName'] . ']') : '';
+            $un = preg_replace('/[^a-zA-ZА-Яа-я0-9\s\(\)]/u', '?', $aUser['firstName']);
+            //$un = strlen($un) !== 0 ? $un : '?';
+            $reply .= '- ' . $un . $nn . PHP_EOL;
         }
         $reply .= PHP_EOL;
         if (isAdmin($nickName) == true) {
             if (strlen($eventString) > 0) {
                 $aAllData = $storage->getAllData($aAllData);
-                $aAllData = []; // TODO КАкая-то фигня. Сервер не возвращает список в цикле ниже!!!
                 $reply .= 'Скинули статистику: ' . count($aAllData) . PHP_EOL;
                 if (count($aAllData) > 0) {
-                    foreach ($aAllData as $chatId => $aData) {
+                    foreach ($aAllData as $aData) {
                         $agentName = $aData[0]['data']['Agent Name'];
                         $agentLevel = $aData[0]['data']['Level'];
                         $agentFaction = $aData[0]['data']['Agent Faction'];
                         $agentFaction = $agentFaction == 'Enlightened' ? 'E' : 'R';
-                        $sLine = '- ' . $agentName . ' ' . $agentFaction . $agentLevel . ' (' . count($aData) . ')' . PHP_EOL;
-                        $reply .= $sLine;
+                        $reply .= '- ' . $agentName . ' ' . $agentFaction . $agentLevel . ' (' . count($aData) . ')' . PHP_EOL;
                     }
                 }
             }
@@ -442,7 +440,7 @@ function getDeltaBlock(array $aNewData, array $aOldData)
  /**
   * админом может только человек с заполнеными именем пользователя (никнеймом) в Телеграм
  */
-function isAdmin($eventname='', $nickname='')
+function isAdmin($nickname, $eventname='')
 {
     //return true; // DEBUG: все и везде админы!
 
@@ -452,14 +450,10 @@ function isAdmin($eventname='', $nickname='')
         'testNickname', // telegram nicknames without @
     ];
 
-    global $storage, $nickName, $eventString;
+    global $storage, $eventString;
     // Если событие не указано - берём текущее
     if (strlen($eventname) == 0) {
         $eventname = $eventString;
-    }
-    // Если пользователь не указан - берём текущего
-    if (strlen($nickname) == 0) {
-        $nickname = $nickName;
     }
     // Если имя пользователя не указано (в настройках Телеграм) - админом он быть не может
     if (strlen($nickname) == 0) {

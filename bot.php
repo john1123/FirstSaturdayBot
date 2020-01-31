@@ -193,7 +193,7 @@ if($text){
     } else if (mb_strtolower($text,'UTF-8') == "помощь") {
         $reply  = 'Бот предназначен для отслеживания и учёта изменений игроков Ingress. Для работы нужно в игре скопировать данные профиля в Ingress Prime и как есть отправить их боту.' . PHP_EOL;
         $reply .= 'Доступны следующие команды:' . PHP_EOL . PHP_EOL;
-        $reply .= '<b>Начать</b> - Отменить регистрацию на событие. Используйте, чтобы сменить событие.' . PHP_EOL;
+        $reply .= '<b>Начать</b> - Отменить регистрацию на событие. Используйте, чтобы выбрать другое событие.' . PHP_EOL;
         $reply .= '<b>Сброс</b> - Удалить всю свою статистику и начать всё заново.' . PHP_EOL;
         $reply .= '<b>Состояние</b> - Текущее состояние. Зарегистрированы ли вы? Идёт ли событие и т.п.' . PHP_EOL;
         $reply .= '<b>Помощь</b> - Краткое описание команд. Этот текст.' . PHP_EOL;
@@ -203,7 +203,7 @@ if($text){
             $reply .= PHP_EOL;
             $reply .= 'Команды администратора:' . PHP_EOL;
             $reply .= '<b>Участники</b> - Также показывает список участников события скидывавших статистику. В скобках - сколько раз (1-один или 2-много).' . PHP_EOL;
-            $reply .= '<b>Профиль ДанныеПрофиля</b> - Позводяет разобрать данные любого профиля (ДанныеПрофиля). Полезна при добавлении игрока в таблицу в ручном режиме.' . PHP_EOL;
+            $reply .= '<b>? ДанныеПрофиля</b> - Позводяет разобрать данные любого профиля (ДанныеПрофиля). Полезна при добавлении игрока в таблицу в ручном режиме.' . PHP_EOL;
             $reply .= '<b>Результаты</b> - Загрузить результаты всех участников события собранные в xls-файл' . PHP_EOL;
             //$reply .= '<b>Событие (создать|удалить)</b> - Создать или удалить новое событие. Имеет формат <i>Событие создать "Название события" ДатаНачала ВремяНачала ВремяКонца</i>. Например "Событие создать "SimferopolFS - Тест" 23.01.2020 10:00 21:00" или "Событие удалить НазваниеСобытия"' . PHP_EOL;
         }
@@ -231,7 +231,7 @@ if($text){
         if (isAdmin($nickName) == true) {
             if (strlen($eventString) > 0) {
                 $aAllData = $storage->getAllData($aAllData);
-                $reply .= 'Скинули статистику: ' . count($aAllData) . PHP_EOL;
+                $reply .= 'Результаты: ' . count($aAllData) . PHP_EOL;
                 if (count($aAllData) > 0) {
                     foreach ($aAllData as $aData) {
                         $agentName = $aData[0]['data']['Agent Name'];
@@ -246,13 +246,14 @@ if($text){
         sendTelegramMessage($chatId, $reply, $aKeyboard);
 
         //
-    // --ПРОФИЛЬ
-    } else if (preg_match('/^Профиль\s+(.+)/sim', $text, $regs)) {
+    // --? (ПРОИЗВОЛЬНЫЙ ПРОФИЛЬ)
+    } else if (preg_match('/^\?\s+(.+)/sim', $text, $regs)) {
+        $reply .= 'Профиль агента' . PHP_EOL . PHP_EOL;
         $aProfile = IngressProfile::parseProfile($regs[1]);
-        $reply .= 'Агент: ' . $aProfile['Agent Name'] . PHP_EOL;
-        $reply .= 'Фракция: ' . $aProfile['Agent Faction'] . PHP_EOL;
-        foreach (IngressProfile::$aDeltaKeys as $key) {
-            $reply .= $key . ': ' . $aProfile[$key] . PHP_EOL;
+        $reply .= 'Agent Name: ' . $aProfile['Agent Name'] . PHP_EOL;
+        $reply .= 'Agent Faction: ' . $aProfile['Agent Faction'] . PHP_EOL;
+        foreach ($aProfile as $key => $value) {
+            $reply .= $key . ': ' . $value . PHP_EOL;
         }
         sendTelegramMessage($chatId, $reply, $aKeyboard);
 

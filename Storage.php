@@ -317,7 +317,6 @@ class Storage
      */
     public function userUnregister($eventName, $chatId)
     {
-        $this->deleteAgentData(false, $eventName);
         $sFilename = $this->dataDir . self::$usersFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];

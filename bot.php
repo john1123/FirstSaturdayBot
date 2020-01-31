@@ -30,7 +30,7 @@ $result = $telegram -> getWebhookUpdates();
 $text = @$result["message"]["text"];
 $chatId = @$result["message"]["chat"]["id"];
 if (strlen($chatId) < 1) {
-    //die('Ошибка. Скрипт нельзя вызывать непосредственно из браузера! Установите вебхук вызвав https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<адрес и путь к скрипту>/bot.php');
+    // Вызов без параметров (из Крона)
     // Дёргать оповещения
     $storage = new Storage('');
     $aMessages = $storage->getMessages();
@@ -270,7 +270,7 @@ if($text){
                     $aParams = explode(' ', $regs[3]);
                     $start = $aParams[0] . ' ' . $aParams[1];
                     $end = $aParams[0] . ' ' . $aParams[2];
-                    $aAdmins = [$nickName];
+                    $aAdmins = [];
                     for ($i=3; $i<count($aParams); $i++) {
                         $aAdmins[] = $aParams[$i];
                     }

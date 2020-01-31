@@ -58,7 +58,7 @@ if (strlen($chatId) < 1) {
 
 $nickName = strlen($result["message"]["from"]["username"]) > 0 ? $result["message"]["from"]["username"] : '';
 /** @var $fullUser - полное имя текущего пользователя */
-$fullUser = $result["message"]["from"]["first_name"] . (strlen($nickName) > 0 ? ' (@' . $nickName . ')' : '');
+$fullUser = $result["message"]["from"]["first_name"] . (strlen($nickName) > 0 ? ' [@' . $nickName . ']' : '');
 
 $aKeyboard = [['Состояние']/*,['Помощь']*/];
 
@@ -195,13 +195,20 @@ if($text){
     // --УЧАСТНИКИ
     } else if (mb_strtolower($text,'UTF-8') == "участники") {
         $reply .= 'Участники "<b>' . $eventString . '</b>".' . PHP_EOL;
-        $userList = $storage->userList();
-        $reply .= 'Количество: ' . count($userList) . PHP_EOL;
+        $aUserList = $storage->userList();
+        $reply .= 'Заявки: ' . count($aUserList) . PHP_EOL;
+        foreach ($aUserList as $aUser) {
+            $nickName = strlen($aUser['nickName'])  > 0 ? (' [@' . $aUser['nickName'] . ']') : '';
+            $username = preg_replace('/[^a-zA-ZА-Яа-я0-9\s\(\)]/u', '?', $aUser['firstName']);
+            //$username = strlen($username) !== 0 ? $username : '?';
+            $reply .= '- ' . $username . $nickName . PHP_EOL;
+        }
+        $reply .= PHP_EOL;
         if (isAdmin($nickName) == true) {
             if (strlen($eventString) > 0) {
                 $aAllData = $storage->getAllData($aAllData);
-                $reply .= 'Скидывали статистику:' . PHP_EOL . PHP_EOL;
                 $aAllData = []; // TODO КАкая-то фигня. Сервер не возвращает список в цикле ниже!!!
+                $reply .= 'Скинули статистику: ' . count($aAllData) . PHP_EOL;
                 if (count($aAllData) > 0) {
                     foreach ($aAllData as $chatId => $aData) {
                         $agentName = $aData[0]['data']['Agent Name'];
@@ -211,13 +218,10 @@ if($text){
                         $sLine = '- ' . $agentName . ' ' . $agentFaction . $agentLevel . ' (' . count($aData) . ')' . PHP_EOL;
                         $reply .= $sLine;
                     }
-                } else {
-                    $reply .= 'Статистику пока не скидывали' . PHP_EOL;
                 }
             }
         }
-        $result = sendTelegramMessage($chatId, $reply, $aKeyboard);
-        $logger->log('result='.print_r($result, true));
+        sendTelegramMessage($chatId, $reply, $aKeyboard);
 
         //
     // --ПРОФИЛЬ
@@ -440,7 +444,7 @@ function getDeltaBlock(array $aNewData, array $aOldData)
  */
 function isAdmin($eventname='', $nickname='')
 {
-    return true; // DEBUG: все и везде админы!
+    //return true; // DEBUG: все и везде админы!
 
     /** @var $aAdmins array - Ники из этого списка всегда будут админскими */
     $aAdmins = [

@@ -1,8 +1,12 @@
 <?php
+
+/** Часовой пояс. Без этого спамят ошибками фунцкии даты на сервере. Чтобы не настраивать в php.ini */
 date_default_timezone_set('Europe/Moscow');
 
 /** Токен, полученный у @BotFather */
 define('TELEGRAM_BOT_TOKEN', '792434518:AAFilIOmSe0FiH2lIW3ieWLSKnY0Tz4epTo');
+/** Telegram - username админа сервера (без символа @ в начале). Создаёт события, решает административные вопросы */
+define('ADMIN_NICKNAME', 'MorKwa'); // Будет использоваться как @ADMIN_NICKNAME
 
 //include('test.php');include('TestApi.php');include('vendor/john1123/logger/src/File.php');
 include('vendor/autoload.php');
@@ -95,7 +99,7 @@ if($text){
             $reply .= 'Для этого, пожалуйста, выберите событие нажав на соответствующую кнопку.' . PHP_EOL;
         } else {
             $reply .= 'Событий в настоящее время не создано.' . PHP_EOL;
-            $reply .= 'Для создания, просьба писать @MorKwa.' . PHP_EOL;
+            $reply .= 'Для создания, просьба писать @' . ADMIN_NICKNAME . '.' . PHP_EOL;
         }
         $reply .= PHP_EOL . 'Вы можете воспользоваться командой <b>Помощь</b> в любой момент для вызова справки.';
 
@@ -147,7 +151,7 @@ if($text){
             } else {
                 if (isAdmin($nickName) == true) {
                     $reply .= 'Нет предстоящих событий. Вам необходимо создать хотя бы одно.' . PHP_EOL;
-                    $reply .= 'Для создания, просьба писать @MorKwa.' . PHP_EOL;
+                    $reply .= 'Для создания, просьба писать @' . ADMIN_NICKNAME . '.' . PHP_EOL;
                 } else {
                     $reply .= 'Событий в настоящее время не создано.' . PHP_EOL;
                     $reply .= 'Сообщите, пожалуйста, об этом организаторам' . PHP_EOL;
@@ -171,7 +175,7 @@ if($text){
                 $reply .= 'Для этого, пожалуйста, выберите событие нажав на соответствующую кнопку.' . PHP_EOL;
             } else {
                 $reply .= 'Событий в настоящее время не создано.' . PHP_EOL;
-                $reply .= 'Для создания, просьба писать @MorKwa.' . PHP_EOL;
+                $reply .= 'Для создания, просьба писать @' . ADMIN_NICKNAME . '.' . PHP_EOL;
             }
         }
         sendTelegramMessage($chatId, $reply, $aKeyboard);
@@ -198,7 +202,8 @@ if($text){
 
         $reply .= PHP_EOL;
         $reply .= 'Автор бота MorKwa E15 @MorKwa' . PHP_EOL;
-        $reply .= 'Администратор бота @MorKwa. Создание, проведение событий.' . PHP_EOL;
+        $reply .= 'Администратор бота @' . ADMIN_NICKNAME . '.' . PHP_EOL;
+        $reply .= 'Создание, проведение событий.' . PHP_EOL;
 
         sendTelegramMessage($chatId, $reply, $aKeyboard);
 
@@ -460,8 +465,8 @@ function isAdmin($nickname, $eventname='')
 
     /** @var $aAdmins array - Ники из этого списка всегда будут админскими */
     $aAdmins = [
-        'MorKwa',
-        'testNickname', // telegram nicknames without @
+        ADMIN_NICKNAME, // telegram nicknames without @
+        'testNickname',
     ];
 
     global $storage, $eventString;

@@ -291,7 +291,7 @@ class Storage
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         if (array_key_exists($eventname, $aAllData)) {
-            $aAdmins = $aAllData[$eventname]['data']['admin'];
+            $aAdmins = $aAllData[$eventname]['admins'];
             return in_array($nickname, $aAdmins);
         }
         return false;

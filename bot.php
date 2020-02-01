@@ -30,7 +30,7 @@ $result = $telegram -> getWebhookUpdates();
 $text = @$result["message"]["text"];
 $chatId = @$result["message"]["chat"]["id"];
 if (strlen($chatId) < 1) {
-    //die('Ошибка. Скрипт нельзя вызывать непосредственно из браузера! Установите вебхук вызвав https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<адрес и путь к скрипту>/bot.php');
+    // Вызов без параметров (из Крона)
     // Дёргать оповещения
     $storage = new Storage('');
     $aMessages = $storage->getMessages();
@@ -58,7 +58,7 @@ if (strlen($chatId) < 1) {
 
 $nickName = strlen($result["message"]["from"]["username"]) > 0 ? $result["message"]["from"]["username"] : '';
 /** @var $fullUser - полное имя текущего пользователя */
-$fullUser = $result["message"]["from"]["first_name"] . (strlen($nickName) > 0 ? ' (@' . $nickName . ')' : '');
+$fullUser = $result["message"]["from"]["first_name"] . (strlen($nickName) > 0 ? ' [@' . $nickName . ']' : '');
 
 $aKeyboard = [['Состояние']/*,['Помощь']*/];
 
@@ -94,14 +94,8 @@ if($text){
             $reply .= 'Для начала работы, вам необходимо зарегистрироваться на одно из предстоящих событий. ';
             $reply .= 'Для этого, пожалуйста, выберите событие нажав на соответствующую кнопку.' . PHP_EOL;
         } else {
-            if (isAdmin($nickName) == true) {
-                $reply .= 'Нет предстоящих событий. Вам необходимо создать хотя бы одно.' . PHP_EOL;
-                $reply .= 'Воспользуйтесь командой <b>Создать событие</b>' . PHP_EOL;
-
-            } else {
-                $reply .= 'Событий в настоящее время не создано.' . PHP_EOL;
-                $reply .= 'Сообщите, пожалуйста, об этом организаторам' . PHP_EOL;
-            }
+            $reply .= 'Событий в настоящее время не создано.' . PHP_EOL;
+            $reply .= 'Для создания, просьба писать @MorKwa.' . PHP_EOL;
         }
         $reply .= PHP_EOL . 'Вы можете воспользоваться командой <b>Помощь</b> в любой момент для вызова справки.';
 
@@ -147,15 +141,13 @@ if($text){
             //
             $aEvents = $storage->eventList();
             $aKeyboard = count($aEvents) > 0 ? [$aEvents] : [];
-
             if (count($aKeyboard[0] ) > 0) {
                 $reply .= 'Для начала работы, вам необходимо зарегистрироваться на одно из предстоящих событий. ';
                 $reply .= 'Для этого, пожалуйста, выберите событие нажав на соответствующую кнопку.' . PHP_EOL;
             } else {
                 if (isAdmin($nickName) == true) {
                     $reply .= 'Нет предстоящих событий. Вам необходимо создать хотя бы одно.' . PHP_EOL;
-                    $reply .= 'Воспользуйтесь командой <b>Создать событие</b>' . PHP_EOL;
-
+                    $reply .= 'Для создания, просьба писать @MorKwa.' . PHP_EOL;
                 } else {
                     $reply .= 'Событий в настоящее время не создано.' . PHP_EOL;
                     $reply .= 'Сообщите, пожалуйста, об этом организаторам' . PHP_EOL;
@@ -166,27 +158,47 @@ if($text){
         sendTelegramMessage($chatId, $reply, $aKeyboard);
 
     //
+    // -- СБРОС
+    } else if (mb_strtolower($text,'UTF-8') == "сброс") {
+        if (strlen($eventString) > 0) {
+            $reply .= 'Данные успешно очищены.' . PHP_EOL;
+            $storage->deleteAgentData(false, $eventString);
+        } else {
+            $aEvents = $storage->eventList();
+            $aKeyboard = count($aEvents) > 0 ? [$aEvents] : [];
+            if (count($aKeyboard[0] ) > 0) {
+                $reply .= 'Для начала работы, вам необходимо зарегистрироваться на одно из предстоящих событий. ';
+                $reply .= 'Для этого, пожалуйста, выберите событие нажав на соответствующую кнопку.' . PHP_EOL;
+            } else {
+                $reply .= 'Событий в настоящее время не создано.' . PHP_EOL;
+                $reply .= 'Для создания, просьба писать @MorKwa.' . PHP_EOL;
+            }
+        }
+        sendTelegramMessage($chatId, $reply, $aKeyboard);
+
+    //
     // -- ПОМОЩЬ
     } else if (mb_strtolower($text,'UTF-8') == "помощь") {
-        $reply  = 'Бот предназначен для отслеживания и учёта изменений игроков Ingress. Для работы нужно в игре скопировать данные профиля в Ingress Prime и как есть отправить их боту.' . PHP_EOL;
+        $reply  = 'Бот предназначен для отслеживания и учёта изменений игроков Ingress. Для работы нужно в игре скопировать данные профиля в Ingress Prime и как есть отправить их боту.' . PHP_EOL . PHP_EOL;
         $reply .= 'Доступны следующие команды:' . PHP_EOL . PHP_EOL;
-        $reply .= '<b>Начать</b> - Отменить регистрацию на событие и начать всё заново.' . PHP_EOL;
+        $reply .= '<b>Начать</b> - Отменить регистрацию на событие. Используйте, чтобы выбрать другое событие.' . PHP_EOL;
+        $reply .= '<b>Сброс</b> - Удалить всю свою статистику и начать заново.' . PHP_EOL;
         $reply .= '<b>Состояние</b> - Текущее состояние. Зарегистрированы ли вы? Идёт ли событие и т.п.' . PHP_EOL;
         $reply .= '<b>Помощь</b> - Краткое описание команд. Этот текст.' . PHP_EOL;
-        $reply .= '<b>Участники</b> - Количество людей зарегистрированных на событие.' . PHP_EOL;
+        $reply .= '<b>Участники</b> - Список людей, зарегистрированных на событие.' . PHP_EOL;
 
         if (isAdmin($nickName)) {
             $reply .= PHP_EOL;
-            $reply .= 'Команды администратора:' . PHP_EOL;
+            $reply .= 'Команды администратора:' . PHP_EOL . PHP_EOL;
             $reply .= '<b>Участники</b> - Также показывает список участников события скидывавших статистику. В скобках - сколько раз (1-один или 2-много).' . PHP_EOL;
-            $reply .= '<b>Профиль ДанныеПрофиля</b> - Позводяет разобрать данные любого профиля (ДанныеПрофиля). Полезна при добавлении игрока в таблицу в ручном режиме.' . PHP_EOL;
+            $reply .= '<b>? (ДанныеПрофиля)</b> - Позволяет разобрать данные любого профиля (ДанныеПрофиля). Может быть полезной при добавлении игрока в таблицу результатов в ручном режиме.' . PHP_EOL;
             $reply .= '<b>Результаты</b> - Загрузить результаты всех участников события собранные в xls-файл' . PHP_EOL;
             //$reply .= '<b>Событие (создать|удалить)</b> - Создать или удалить новое событие. Имеет формат <i>Событие создать "Название события" ДатаНачала ВремяНачала ВремяКонца</i>. Например "Событие создать "SimferopolFS - Тест" 23.01.2020 10:00 21:00" или "Событие удалить НазваниеСобытия"' . PHP_EOL;
         }
 
         $reply .= PHP_EOL;
         $reply .= 'Автор бота MorKwa E15 @MorKwa' . PHP_EOL;
-        $reply .= 'Исходный код доступен по адресу https://github.com/john1123/FirstSaturdayBot/' . PHP_EOL;
+        $reply .= 'Администратор бота @MorKwa. Создание, проведение событий.' . PHP_EOL;
 
         sendTelegramMessage($chatId, $reply, $aKeyboard);
 
@@ -195,43 +207,47 @@ if($text){
     // --УЧАСТНИКИ
     } else if (mb_strtolower($text,'UTF-8') == "участники") {
         $reply .= 'Участники "<b>' . $eventString . '</b>".' . PHP_EOL;
-        $userList = $storage->userList();
-        $reply .= 'Количество: ' . count($userList) . PHP_EOL;
+        $aUserList = $storage->userList();
+        $reply .= 'Заявки: ' . count($aUserList) . PHP_EOL;
+        foreach ($aUserList as $aUser) {
+            $nn = strlen($aUser['nickName'])  > 0 ? (' [@' . $aUser['nickName'] . ']') : '';
+            $un = preg_replace('/[^a-zA-ZА-Яа-я0-9\s\(\)]/u', '?', $aUser['firstName']);
+            //$un = strlen($un) !== 0 ? $un : '?';
+            $reply .= '- ' . $un . $nn . PHP_EOL;
+        }
+        $reply .= PHP_EOL;
         if (isAdmin($nickName) == true) {
             if (strlen($eventString) > 0) {
                 $aAllData = $storage->getAllData($aAllData);
-                $reply .= 'Скидывали статистику:' . PHP_EOL . PHP_EOL;
-                $aAllData = []; // TODO КАкая-то фигня. Сервер не возвращает список в цикле ниже!!!
+                $reply .= 'Результаты: ' . count($aAllData) . PHP_EOL;
                 if (count($aAllData) > 0) {
-                    foreach ($aAllData as $chatId => $aData) {
+                    foreach ($aAllData as $aData) {
                         $agentName = $aData[0]['data']['Agent Name'];
                         $agentLevel = $aData[0]['data']['Level'];
                         $agentFaction = $aData[0]['data']['Agent Faction'];
                         $agentFaction = $agentFaction == 'Enlightened' ? 'E' : 'R';
-                        $sLine = '- ' . $agentName . ' ' . $agentFaction . $agentLevel . ' (' . count($aData) . ')' . PHP_EOL;
-                        $reply .= $sLine;
+                        $reply .= '- ' . $agentName . ' ' . $agentFaction . $agentLevel . ' (' . count($aData) . ')' . PHP_EOL;
                     }
-                } else {
-                    $reply .= 'Статистику пока не скидывали' . PHP_EOL;
                 }
             }
-        }
-        $result = sendTelegramMessage($chatId, $reply, $aKeyboard);
-        $logger->log('result='.print_r($result, true));
-
-        //
-    // --ПРОФИЛЬ
-    } else if (preg_match('/^Профиль\s+(.+)/sim', $text, $regs)) {
-        $aProfile = IngressProfile::parseProfile($regs[1]);
-        $reply .= 'Агент: ' . $aProfile['Agent Name'] . PHP_EOL;
-        $reply .= 'Фракция: ' . $aProfile['Agent Faction'] . PHP_EOL;
-        foreach (IngressProfile::$aDeltaKeys as $key) {
-            $reply .= $key . ': ' . $aProfile[$key] . PHP_EOL;
         }
         sendTelegramMessage($chatId, $reply, $aKeyboard);
 
 
-        //
+    //
+    // --? (ПРОИЗВОЛЬНЫЙ ПРОФИЛЬ)
+    } else if (preg_match('/^\?\s+(.+)/sim', $text, $regs)) {
+        $reply .= 'Профиль агента' . PHP_EOL . PHP_EOL;
+        $aProfile = IngressProfile::parseProfile($regs[1]);
+        $reply .= 'Agent Name: ' . $aProfile['Agent Name'] . PHP_EOL;
+        $reply .= 'Agent Faction: ' . $aProfile['Agent Faction'] . PHP_EOL;
+        foreach ($aProfile as $key => $value) {
+            $reply .= $key . ': ' . $value . PHP_EOL;
+        }
+        sendTelegramMessage($chatId, $reply, $aKeyboard);
+
+
+    //
     // --РЕЗУЛЬТАТЫ
     } else if (mb_strtolower($text,'UTF-8') == "результаты") {
         if (isAdmin($nickName) == true) {
@@ -256,7 +272,7 @@ if($text){
         sendTelegramMessage($chatId, $reply, $aKeyboard);
 
 
-        //
+    //
     // Создание-удаление события
     } else if (preg_match('/^Событие\s+(создать|удалить)\s+(.+)$/ui', $text, $regs)) {
         if (isAdmin($nickName) == true) {
@@ -268,7 +284,7 @@ if($text){
                     $aParams = explode(' ', $regs[3]);
                     $start = $aParams[0] . ' ' . $aParams[1];
                     $end = $aParams[0] . ' ' . $aParams[2];
-                    $aAdmins = [$nickName];
+                    $aAdmins = [];
                     for ($i=3; $i<count($aParams); $i++) {
                         $aAdmins[] = $aParams[$i];
                     }
@@ -438,9 +454,9 @@ function getDeltaBlock(array $aNewData, array $aOldData)
  /**
   * админом может только человек с заполнеными именем пользователя (никнеймом) в Телеграм
  */
-function isAdmin($eventname='', $nickname='')
+function isAdmin($nickname, $eventname='')
 {
-    return true; // DEBUG: все и везде админы!
+    //return true; // DEBUG: все и везде админы!
 
     /** @var $aAdmins array - Ники из этого списка всегда будут админскими */
     $aAdmins = [
@@ -448,14 +464,10 @@ function isAdmin($eventname='', $nickname='')
         'testNickname', // telegram nicknames without @
     ];
 
-    global $storage, $nickName, $eventString;
+    global $storage, $eventString;
     // Если событие не указано - берём текущее
     if (strlen($eventname) == 0) {
         $eventname = $eventString;
-    }
-    // Если пользователь не указан - берём текущего
-    if (strlen($nickname) == 0) {
-        $nickname = $nickName;
     }
     // Если имя пользователя не указано (в настройках Телеграм) - админом он быть не может
     if (strlen($nickname) == 0) {

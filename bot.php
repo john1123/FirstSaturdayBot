@@ -255,21 +255,29 @@ if($text){
             $agentName = $aData[1]['data']['Agent Name'];
             $agentFaction = $aData[1]['data']['Agent Faction'] == 'Resistance' ? 'R' : 'E';
             $agentLevel = $aData[1]['data']['Level'];
-            $aResult[$agentName . ' (' . $agentFaction . $agentLevel . ')'] = $aStatistics;
+            $aResult[$agentName . ' - ' . $agentFaction . $agentLevel] = $aStatistics;
         }
-        foreach (IngressProfile::$aDeltaKeys as $key) {
-            $reply .= '<b>' . $key . '</b>' . PHP_EOL;
-            $aTmp = [];
-            foreach ($aResult as $agent => $aData) {
-                if ($aData[$key] == 0) continue; // не включать нулевые значения в статистику
-                $aTmp[$agent] = $aData[$key];
+        if (count($aResult) > 0) {
+            foreach (IngressProfile::$aDeltaKeys as $key) {
+                $reply .= '<b>' . $key . '</b>' . PHP_EOL;
+                $aTmp = [];
+                foreach ($aResult as $agent => $aData) {
+                    if ($aData[$key] == 0) continue; // не включать нулевые значения в статистику
+                    $aTmp[$agent] = $aData[$key];
+                }
+                arsort($aTmp);
+                $aTmp = array_slice($aTmp, 0, 5); // В статистике по 5 максимальных результатов
+                if (count($aTmp) > 0) {
+                    foreach ($aTmp as $agent => $value) {
+                        $reply .= '- ' . $agent . ' (' . $value . ')' . PHP_EOL;
+                    }
+                } else {
+                    $reply .= '- нет' . PHP_EOL;
+                }
+                $reply .= PHP_EOL;
             }
-            arsort($aTmp);
-            $aTmp = array_slice($aTmp, 0, 5); // В статистике по 5 максимальных результатов
-            foreach ($aTmp as $agent => $aData) {
-                $reply .= $agent . ' (' . $aData . ')' . PHP_EOL;
-            }
-            $reply .= PHP_EOL;
+        } else {
+            $reply .= ' пока отсутствует' . PHP_EOL;
         }
 
         sendTelegramMessage($chatId, $reply, $aKeyboard);

@@ -198,6 +198,7 @@ if($text){
             $reply .= '<b>Участники</b> - Также показывает список участников события скидывавших статистику. В скобках - сколько раз (1-один или 2-много).' . PHP_EOL;
             $reply .= '<b>? (ДанныеПрофиля)</b> - Позволяет разобрать данные любого профиля (ДанныеПрофиля). Может быть полезной при добавлении игрока в таблицу результатов в ручном режиме.' . PHP_EOL;
             $reply .= '<b>Результаты</b> - Загрузить результаты всех участников события собранные в xls-файл' . PHP_EOL;
+            $reply .= '<b>Статистика</b> - Статистика мероприятия. Результаты отсортированы и сгруппированы по дисциплинам.' . PHP_EOL;
             //$reply .= '<b>Событие (создать|удалить)</b> - Создать или удалить новое событие. Имеет формат <i>Событие создать "Название события" ДатаНачала ВремяНачала ВремяКонца</i>. Например "Событие создать "SimferopolFS - Тест" 23.01.2020 10:00 21:00" или "Событие удалить НазваниеСобытия"' . PHP_EOL;
         }
 
@@ -243,44 +244,48 @@ if($text){
     //
     // --СТАТИСТИКА
     } else if (mb_strtolower($text,'UTF-8') == "статистика") {
-        $reply .= 'Статистика "<b>' . $eventString . '</b>".' . PHP_EOL . PHP_EOL;
-        $aFullData = $storage->getAllData();
-        $aResult = [];
-        foreach ($aFullData as $aData) {
-            if (count($aData) != 2) { continue; }
-            $aStatistics = [];
-            foreach (IngressProfile::$aDeltaKeys as $key) {
-                $aStatistics[$key] = $aData[1]['data'][$key] - $aData[0]['data'][$key];
+        if (isAdmin($nickName) == true) {
+            $reply .= 'Статистика "<b>' . $eventString . '</b>".' . PHP_EOL . PHP_EOL;
+            $aFullData = $storage->getAllData();
+            $aResult = [];
+            foreach ($aFullData as $aData) {
+                if (count($aData) != 2) { continue; }
+                $aStatistics = [];
+                foreach (IngressProfile::$aDeltaKeys as $key) {
+                    $aStatistics[$key] = $aData[1]['data'][$key] - $aData[0]['data'][$key];
+                }
+                $agentName = $aData[1]['data']['Agent Name'];
+                $agentFaction = $aData[1]['data']['Agent Faction'] == 'Resistance' ? 'R' : 'E';
+                $agentLevel = $aData[1]['data']['Level'];
+                $aResult[$agentName . ' - ' . $agentFaction . $agentLevel] = $aStatistics;
             }
-            $agentName = $aData[1]['data']['Agent Name'];
-            $agentFaction = $aData[1]['data']['Agent Faction'] == 'Resistance' ? 'R' : 'E';
-            $agentLevel = $aData[1]['data']['Level'];
-            $aResult[$agentName . ' - ' . $agentFaction . $agentLevel] = $aStatistics;
-        }
-        if (count($aResult) > 0) {
-            foreach (IngressProfile::$aDeltaKeys as $key) {
-                $reply .= '<b>' . $key . '</b>' . PHP_EOL;
-                $aTmp = [];
-                foreach ($aResult as $agent => $aData) {
-                    if ($aData[$key] == 0) continue; // не включать нулевые значения в статистику
-                    $aTmp[$agent] = $aData[$key];
-                }
-                arsort($aTmp);
-                $aTmp = array_slice($aTmp, 0, 5); // В статистике по 5 максимальных результатов
-                if (count($aTmp) > 0) {
-                    foreach ($aTmp as $agent => $value) {
-                        $reply .= '- ' . $agent . ' (' . $value . ')' . PHP_EOL;
+            if (count($aResult) > 0) {
+                foreach (IngressProfile::$aDeltaKeys as $key) {
+                    $reply .= '<b>' . $key . '</b>' . PHP_EOL;
+                    $aTmp = [];
+                    foreach ($aResult as $agent => $aData) {
+                        if ($aData[$key] == 0) continue; // не включать нулевые значения в статистику
+                        $aTmp[$agent] = $aData[$key];
                     }
-                } else {
-                    $reply .= '- нет' . PHP_EOL;
+                    arsort($aTmp);
+                    $aTmp = array_slice($aTmp, 0, 5); // В статистике по 5 максимальных результатов
+                    if (count($aTmp) > 0) {
+                        foreach ($aTmp as $agent => $value) {
+                            $reply .= '- ' . $agent . ' (' . $value . ')' . PHP_EOL;
+                        }
+                    } else {
+                        $reply .= '- нет' . PHP_EOL;
+                    }
+                    $reply .= PHP_EOL;
                 }
-                $reply .= PHP_EOL;
+            } else {
+                $reply .= ' пока отсутствует' . PHP_EOL;
             }
         } else {
-            $reply .= ' пока отсутствует' . PHP_EOL;
+            $reply = 'Недостаточно прав' . PHP_EOL;
         }
-
         sendTelegramMessage($chatId, $reply, $aKeyboard);
+
 
 
     //

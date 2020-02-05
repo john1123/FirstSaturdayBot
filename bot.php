@@ -28,6 +28,7 @@ $result = $telegram -> getWebhookUpdates();
 //$result = $telegram -> getWebhookUpdates($morkwa1);
 //$result = $telegram -> getWebhookUpdates('Результаты');
 //$result = $telegram -> getWebhookUpdates('Участники');
+//$result = $telegram -> getWebhookUpdates('Статистика');
 //$result = $telegram -> getWebhookUpdates('Помощь');
 //$result = $telegram -> getWebhookUpdates('Профиль ' . $profile);
 
@@ -236,6 +237,41 @@ if($text){
                 }
             }
         }
+        sendTelegramMessage($chatId, $reply, $aKeyboard);
+
+
+    //
+    // --СТАТИСТИКА
+    } else if (mb_strtolower($text,'UTF-8') == "статистика") {
+        $reply .= 'Статистика "<b>' . $eventString . '</b>".' . PHP_EOL . PHP_EOL;
+        $aFullData = $storage->getAllData();
+        $aResult = [];
+        foreach ($aFullData as $aData) {
+            if (count($aData) != 2) { continue; }
+            $aStatistics = [];
+            foreach (IngressProfile::$aDeltaKeys as $key) {
+                $aStatistics[$key] = $aData[1]['data'][$key] - $aData[0]['data'][$key];
+            }
+            $agentName = $aData[1]['data']['Agent Name'];
+            $agentFaction = $aData[1]['data']['Agent Faction'] == 'Resistance' ? 'R' : 'E';
+            $agentLevel = $aData[1]['data']['Level'];
+            $aResult[$agentName . ' (' . $agentFaction . $agentLevel . ')'] = $aStatistics;
+        }
+        foreach (IngressProfile::$aDeltaKeys as $key) {
+            $reply .= '<b>' . $key . '</b>' . PHP_EOL;
+            $aTmp = [];
+            foreach ($aResult as $agent => $aData) {
+                if ($aData[$key] == 0) continue; // не включать нулевые значения в статистику
+                $aTmp[$agent] = $aData[$key];
+            }
+            arsort($aTmp);
+            $aTmp = array_slice($aTmp, 0, 5); // В статистике по 5 максимальных результатов
+            foreach ($aTmp as $agent => $aData) {
+                $reply .= $agent . ' (' . $aData . ')' . PHP_EOL;
+            }
+            $reply .= PHP_EOL;
+        }
+
         sendTelegramMessage($chatId, $reply, $aKeyboard);
 
 

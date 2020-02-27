@@ -24,9 +24,9 @@ $telegram = new Api(TELEGRAM_BOT_TOKEN);
 //$result = $telegram -> getWebhookUpdates();
 //$result = $telegram -> getWebhookUpdates('Начать');
 //$result = $telegram -> getWebhookUpdates('Состояние');
-$result = $telegram -> getWebhookUpdates('Событие создать "IngressFS - Simferopol - March 2020" 07.03.2020 10:00 21:00');
+//$result = $telegram -> getWebhookUpdates('Событие создать "IngressFS - Simferopol - March 2020" 07.03.2020 10:00 21:00');
 //$result = $telegram -> getWebhookUpdates('Событие удалить Simferopol FS1');
-//$result = $telegram -> getWebhookUpdates('IngressFS - Simferopol - February 2020');
+//$result = $telegram -> getWebhookUpdates('/start IngressFS - Simferopol - February 2020');
 //$result = $telegram -> getWebhookUpdates($morkwa1);
 //$result = $telegram -> getWebhookUpdates('Результаты');
 //$result = $telegram -> getWebhookUpdates('Участники');
@@ -91,29 +91,53 @@ if($text){
     $logger->log('Текст введённый пользователем ' . $fullUser . ': ' . $text);
 
     // --- НАЧАТЬ ---START
-    //
-    if ($text == '/start' || mb_strtolower($text,'UTF-8') == "начать") {
+    if (preg_match('%^(?:начать|/start(?:\s+(.+)){0,1})$%ui', $text, $regs)) {
         $reply  .= 'Добро пожаловать, ' . $fullUser . PHP_EOL;
-
-        $aKeyboard = [$storage->eventList()];
-
-        if (count($aKeyboard[0] ) > 0) {
-            $reply .= 'Для начала работы, вам необходимо зарегистрироваться на одно из предстоящих событий. ';
-            $reply .= 'Для этого, пожалуйста, выберите событие нажав на соответствующую кнопку.' . PHP_EOL;
-        } else {
-            $reply .= 'Событий в настоящее время не создано.' . PHP_EOL;
-            $reply .= 'Для создания, просьба писать @' . ADMIN_USERNAME . '.' . PHP_EOL;
-        }
-        $reply .= PHP_EOL . 'Вы можете воспользоваться командой <b>Помощь</b> в любой момент для вызова справки.';
-
-        // Если где-то зарегистрированы - отменяем регистрацию
+        $eventString = urldecode($regs[1]);
         if (strlen($eventString) > 0) {
-            $storage->userUnregister($eventString, $chatId);
+            // Если передано имя события - регистрируем пользователя на него
+            $aEvents = $storage->eventList();
+            if (in_array($eventString, $aEvents)) {
+                $storage->userReset($chatId); // Надо ли?
+                $storage->userRegister($eventString, $result['message']['chat']['id'], [
+                    'nickName' => $nickName,
+                    'firstName' => $result['message']['from']['first_name'],
+                    'chatId' => $result['message']['chat']['id'],
+                ]);
+                $reply  .= "Вы успешно зарегистрировались на \"<b>".$eventString."</b>\"." . PHP_EOL;
+                $aEventData = $storage->eventGet($eventString);
+                if (time() < strtotime($aEventData['start'])) {
+                    $reply  .= "Мы уведомим вас, когда событие начнётся." . PHP_EOL;
+                } elseif (time() > strtotime($aEventData['end'])) {
+                    $reply  .= "Событие уже закончилось!." . PHP_EOL;
+                } else {
+                    $reply  .= "Событие идёт в настоящее время!" . PHP_EOL;
+                    $reply  .= "Скиньте боту вашу статистику." . PHP_EOL;
+                }
+            } else {
+                $reply = "События \"<b>".$eventString."</b>\" не найдено.";
+            }
+        } else {
+            // Событие не указано
+            $aEventsList = $storage->eventList();
+            array_walk($aEventsList, function(&$item) { $item = '/start ' . $item; }); // or $item = '-'.$item;
+            $aKeyboard = [$aEventsList];
+            if (count($aKeyboard[0] ) > 0) {
+                $reply .= 'Для начала работы, вам необходимо зарегистрироваться на одно из предстоящих событий. ';
+                $reply .= 'Для этого, пожалуйста, выберите событие нажав на соответствующую кнопку.' . PHP_EOL;
+            } else {
+                $reply .= 'Событий в настоящее время не создано.' . PHP_EOL;
+                $reply .= 'Для создания, просьба писать @' . ADMIN_USERNAME . '.' . PHP_EOL;
+            }
+            $reply .= PHP_EOL . 'Вы можете воспользоваться командой <b>Помощь</b> в любой момент для вызова справки.';
+
+            // Если где-то зарегистрированы - отменяем регистрацию
+            if (strlen($eventString) > 0) {
+                $storage->userUnregister($eventString, $chatId);
+            }
         }
-
         sendTelegramMessage($chatId, $reply, $aKeyboard);
-
-    //
+        //
     // -- СОСТОЯНИЕ
     } else if (mb_strtolower($text,'UTF-8') == "состояние") {
         $reply = '';
@@ -443,38 +467,6 @@ if($text){
             $reply .= 'Вы не зарегистрированы.' . PHP_EOL;
             $reply .= 'Зарегистрируйтесь на одно из событий используя кнопку ниже.';
             $aKeyboard = [$storage->eventList()];
-        }
-        sendTelegramMessage($chatId, $reply, $aKeyboard);
-
-    //
-    // Регистрация на событие
-    } else {
-
-        // Если передано имя события - регистрируем пользователя на него
-        $aEvents = $storage->eventList();
-        if (in_array($text, $aEvents)) {
-            $storage->userReset($chatId); // Надо ли?
-            $storage->userRegister($text, $result['message']['chat']['id'], [
-                'nickName' => $nickName,
-                'firstName' => $result['message']['from']['first_name'],
-                'chatId' => $result['message']['chat']['id'],
-              ]);
-            $eventString = $text;
-
-            $reply  .= "Вы успешно зарегистрировались на \"<b>".$text."</b>\"." . PHP_EOL;
-            $aEventData = $storage->eventGet($eventString);
-            if (time() < strtotime($aEventData['start'])) {
-                $reply  .= "Мы уведомим вас, когда событие начнётся." . PHP_EOL;
-            } elseif (time() > strtotime($aEventData['end'])) {
-                $reply  .= "Событие уже закончилось!." . PHP_EOL;
-            } else {
-                $reply  .= "Событие идёт в настоящее время!" . PHP_EOL;
-                $reply  .= "Скиньте боту вашу статистику." . PHP_EOL;
-            }
-
-
-        } else {
-            $reply = "По запросу \"<b>".$text."</b>\" ничего не найдено.";
         }
         sendTelegramMessage($chatId, $reply, $aKeyboard);
     }

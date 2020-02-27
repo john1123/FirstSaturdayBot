@@ -6,10 +6,12 @@ date_default_timezone_set('Europe/Moscow');
 /** Токен, полученный у @BotFather */
 define('TELEGRAM_BOT_TOKEN', '792434518:AAFilIOmSe0FiH2lIW3ieWLSKnY0Tz4epTo');
 /** Telegram - username админа сервера (без символа @ в начале). Создаёт события, решает административные вопросы */
-define('ADMIN_NICKNAME', 'MorKwa'); // Будет использоваться как @ADMIN_NICKNAME
+define('ADMIN_USERNAME', 'MorKwa'); // Будет использоваться как @ADMIN_USERNAME
+/** Telegram - username бота (без символа @ в начале). */
+define('BOT_USERNAME', 'FSHelperBot'); // https://t.me/BOT_USERNAME
 
-//include('test.php');include('TestApi.php');include('vendor/john1123/logger/src/File.php');
-include('vendor/autoload.php');
+include('test.php');include('TestApi.php');include('vendor/john1123/logger/src/File.php');
+//include('vendor/autoload.php');
 include('IngressProfile.php');
 include('Storage.php');
 
@@ -19,10 +21,10 @@ use John1123\Logger\File as Logger;
 $logger = new Logger(__DIR__ . '/data/bot_' . date('Ymd') . '.log');
 
 $telegram = new Api(TELEGRAM_BOT_TOKEN);
-$result = $telegram -> getWebhookUpdates();
+//$result = $telegram -> getWebhookUpdates();
 //$result = $telegram -> getWebhookUpdates('Начать');
 //$result = $telegram -> getWebhookUpdates('Состояние');
-//$result = $telegram -> getWebhookUpdates('Событие создать "IngressFS - Simferopol - February 2020" 24.01.2020 10:00 21:00');
+$result = $telegram -> getWebhookUpdates('Событие создать "IngressFS - Simferopol - March 2020" 07.03.2020 10:00 21:00');
 //$result = $telegram -> getWebhookUpdates('Событие удалить Simferopol FS1');
 //$result = $telegram -> getWebhookUpdates('IngressFS - Simferopol - February 2020');
 //$result = $telegram -> getWebhookUpdates($morkwa1);
@@ -100,7 +102,7 @@ if($text){
             $reply .= 'Для этого, пожалуйста, выберите событие нажав на соответствующую кнопку.' . PHP_EOL;
         } else {
             $reply .= 'Событий в настоящее время не создано.' . PHP_EOL;
-            $reply .= 'Для создания, просьба писать @' . ADMIN_NICKNAME . '.' . PHP_EOL;
+            $reply .= 'Для создания, просьба писать @' . ADMIN_USERNAME . '.' . PHP_EOL;
         }
         $reply .= PHP_EOL . 'Вы можете воспользоваться командой <b>Помощь</b> в любой момент для вызова справки.';
 
@@ -152,7 +154,7 @@ if($text){
             } else {
                 if (isAdmin($nickName) == true) {
                     $reply .= 'Нет предстоящих событий. Вам необходимо создать хотя бы одно.' . PHP_EOL;
-                    $reply .= 'Для создания, просьба писать @' . ADMIN_NICKNAME . '.' . PHP_EOL;
+                    $reply .= 'Для создания, просьба писать @' . ADMIN_USERNAME . '.' . PHP_EOL;
                 } else {
                     $reply .= 'Событий в настоящее время не создано.' . PHP_EOL;
                     $reply .= 'Сообщите, пожалуйста, об этом организаторам' . PHP_EOL;
@@ -176,7 +178,7 @@ if($text){
                 $reply .= 'Для этого, пожалуйста, выберите событие нажав на соответствующую кнопку.' . PHP_EOL;
             } else {
                 $reply .= 'Событий в настоящее время не создано.' . PHP_EOL;
-                $reply .= 'Для создания, просьба писать @' . ADMIN_NICKNAME . '.' . PHP_EOL;
+                $reply .= 'Для создания, просьба писать @' . ADMIN_USERNAME . '.' . PHP_EOL;
             }
         }
         sendTelegramMessage($chatId, $reply, $aKeyboard);
@@ -204,7 +206,7 @@ if($text){
 
         $reply .= PHP_EOL;
         $reply .= 'Автор бота MorKwa E15 @MorKwa' . PHP_EOL;
-        $reply .= 'Администратор бота @' . ADMIN_NICKNAME . '.' . PHP_EOL;
+        $reply .= 'Администратор бота @' . ADMIN_USERNAME . '.' . PHP_EOL;
         $reply .= 'Создание, проведение событий.' . PHP_EOL;
 
         sendTelegramMessage($chatId, $reply, $aKeyboard);
@@ -373,7 +375,8 @@ if($text){
                         $fullUser,
                         ['when' => $end]
                     );
-                    $reply = 'Событие "' . $eventName . '" создано.';
+                    $reply = 'Событие "' . $eventName . '" создано.' . PHP_EOL;
+                    $reply = 'Ссылка на событие: https://t.me/' . BOT_USERNAME . '?start=' . urlencode($eventName);
                 } else {
                     // неверный формат. Ожидается:
                     // "Название мероприятия" дд.мм.гггг времяНачала времяКонца админ1 авмин2 админ3 ...
@@ -514,7 +517,7 @@ function isAdmin($nickname, $eventname='')
 
     /** @var $aAdmins array - Ники из этого списка всегда будут админскими */
     $aAdmins = [
-        ADMIN_NICKNAME, // telegram nicknames without @
+        ADMIN_USERNAME, // telegram nicknames without @
         'testNickname',
     ];
 

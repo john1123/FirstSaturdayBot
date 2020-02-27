@@ -56,7 +56,7 @@ class IngressProfile
         'Intel Ops Missions',
         'Stealth Ops Missions',
         'Umbra: Unique Resonator Slots Deployed',
-        'Didact: Total Fields Created',
+        'Didact Fields Created',
         'Recursions',
     ];
     /** @var $firstValuesPhrase - Very first parameters name */

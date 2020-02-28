@@ -474,6 +474,9 @@ if($text){
             $aKeyboard = [$storage->eventNamesList()];
         }
         sendTelegramMessage($chatId, $reply, $aKeyboard);
+    } else {
+        $reply = "Неизвестная команда \"<b>".$text."</b>\".";
+        sendTelegramMessage($chatId, $reply, $aKeyboard);
     }
 } else {
     $reply = "Отправьте текстовое сообщение.";

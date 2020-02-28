@@ -10,8 +10,8 @@ define('ADMIN_USERNAME', 'MorKwa'); // Будет использоваться �
 /** Telegram - username бота (без символа @ в начале). */
 define('BOT_USERNAME', 'FSHelperBot'); // https://t.me/BOT_USERNAME
 
-include('test.php');include('TestApi.php');include('vendor/john1123/logger/src/File.php');
-//include('vendor/autoload.php');
+//include('test.php');include('TestApi.php');include('vendor/john1123/logger/src/File.php');
+include('vendor/autoload.php');
 include('IngressProfile.php');
 include('Storage.php');
 
@@ -21,7 +21,7 @@ use John1123\Logger\File as Logger;
 $logger = new Logger(__DIR__ . '/data/bot_' . date('Ymd') . '.log');
 
 $telegram = new Api(TELEGRAM_BOT_TOKEN);
-//$result = $telegram -> getWebhookUpdates();
+$result = $telegram -> getWebhookUpdates();
 //$result = $telegram -> getWebhookUpdates('Начать');
 //$result = $telegram -> getWebhookUpdates('Состояние');
 //$result = $telegram -> getWebhookUpdates('Событие создать "IngressFS - Simferopol - March 2020" 07.03.2020 10:00 21:00');
@@ -93,19 +93,23 @@ if($text){
     // --- НАЧАТЬ ---START
     if (preg_match('%^(?:начать|/start(?:\s+(.+)){0,1})$%ui', $text, $regs)) {
         $reply  .= 'Добро пожаловать, ' . $fullUser . PHP_EOL;
-        $eventString = urldecode($regs[1]);
+        $storage->userReset($chatId); // Надо ли?
+        $eventString = $regs[1];
+        if (preg_match('/^id\d+$/i', $eventString)) {
+            $aEventData = $storage->eventGet($eventString);
+            $eventString = $aEventData['name'];
+        }
         if (strlen($eventString) > 0) {
             // Если передано имя события - регистрируем пользователя на него
-            $aEvents = $storage->eventList();
+            $aEvents = $storage->eventNamesList();
             if (in_array($eventString, $aEvents)) {
-                $storage->userReset($chatId); // Надо ли?
                 $storage->userRegister($eventString, $result['message']['chat']['id'], [
                     'nickName' => $nickName,
                     'firstName' => $result['message']['from']['first_name'],
                     'chatId' => $result['message']['chat']['id'],
                 ]);
                 $reply  .= "Вы успешно зарегистрировались на \"<b>".$eventString."</b>\"." . PHP_EOL;
-                $aEventData = $storage->eventGet($eventString);
+                $aEventData = $storage->eventGetByName($eventString);
                 if (time() < strtotime($aEventData['start'])) {
                     $reply  .= "Мы уведомим вас, когда событие начнётся." . PHP_EOL;
                 } elseif (time() > strtotime($aEventData['end'])) {
@@ -115,12 +119,12 @@ if($text){
                     $reply  .= "Скиньте боту вашу статистику." . PHP_EOL;
                 }
             } else {
-                $reply = "События \"<b>".$eventString."</b>\" не найдено.";
+                $reply = "Событие \"<b>".$eventString."</b>\" не найдено.";
             }
         } else {
             // Событие не указано
-            $aEventsList = $storage->eventList();
-            array_walk($aEventsList, function(&$item) { $item = '/start ' . $item; }); // or $item = '-'.$item;
+            $aEventsList = $storage->eventNamesList();
+            array_walk($aEventsList, function(&$item) { $item = '/start ' . $item; });
             $aKeyboard = [$aEventsList];
             if (count($aKeyboard[0] ) > 0) {
                 $reply .= 'Для начала работы, вам необходимо зарегистрироваться на одно из предстоящих событий. ';
@@ -142,7 +146,7 @@ if($text){
     } else if (mb_strtolower($text,'UTF-8') == "состояние") {
         $reply = '';
         if (strlen($eventString) > 0) {
-            $aEventData = $storage->eventGet($eventString);
+            $aEventData = $storage->eventGetByName($eventString);
             if (time() < strtotime($aEventData['start'])) {
                 $reply .= 'Событие "<b>' . $eventString . '</b>"' . PHP_EOL;
                 $reply .= 'Ждём начала.' . PHP_EOL;
@@ -170,8 +174,9 @@ if($text){
             }
         } else {
             //
-            $aEvents = $storage->eventList();
-            $aKeyboard = count($aEvents) > 0 ? [$aEvents] : [];
+            $aEventsList = $storage->eventNamesList();
+            array_walk($aEventsList, function(&$item) { $item = '/start ' . $item; });
+            $aKeyboard = count($aEventsList) > 0 ? [$aEventsList] : [];
             if (count($aKeyboard[0] ) > 0) {
                 $reply .= 'Для начала работы, вам необходимо зарегистрироваться на одно из предстоящих событий. ';
                 $reply .= 'Для этого, пожалуйста, выберите событие нажав на соответствующую кнопку.' . PHP_EOL;
@@ -195,7 +200,7 @@ if($text){
             $reply .= 'Данные успешно очищены.' . PHP_EOL;
             $storage->deleteAgentData(false, $eventString);
         } else {
-            $aEvents = $storage->eventList();
+            $aEvents = $storage->eventNamesList();
             $aKeyboard = count($aEvents) > 0 ? [$aEvents] : [];
             if (count($aKeyboard[0] ) > 0) {
                 $reply .= 'Для начала работы, вам необходимо зарегистрироваться на одно из предстоящих событий. ';
@@ -368,7 +373,7 @@ if($text){
                     for ($i=3; $i<count($aParams); $i++) {
                         $aAdmins[] = $aParams[$i];
                     }
-                    $storage->eventAdd(
+                    $eventId = $storage->eventAdd(
                         $eventName,
                         [
                             'start' => $start,
@@ -399,8 +404,8 @@ if($text){
                         $fullUser,
                         ['when' => $end]
                     );
-                    $reply = 'Событие "' . $eventName . '" создано.' . PHP_EOL;
-                    $reply = 'Ссылка на событие: https://t.me/' . BOT_USERNAME . '?start=' . urlencode($eventName);
+                    $reply  = 'Событие "' . $eventName . '" создано.' . PHP_EOL;
+                    $reply .= 'Ссылка на событие: https://t.me/' . BOT_USERNAME . '?start=' . $eventId;
                 } else {
                     // неверный формат. Ожидается:
                     // "Название мероприятия" дд.мм.гггг времяНачала времяКонца админ1 авмин2 админ3 ...
@@ -430,7 +435,7 @@ if($text){
     } else if (preg_match('/(:?\s+\d+){25,}/', $text)) {
 
         if (strlen($eventString) > 0) {
-            $eventData = $storage->eventGet($eventString);
+            $eventData = $storage->eventGetByName($eventString);
 
             $eventTimeStart = $eventData['start'];
             $eventTimeEnd = $eventData['end'];
@@ -466,7 +471,7 @@ if($text){
         } else {
             $reply .= 'Вы не зарегистрированы.' . PHP_EOL;
             $reply .= 'Зарегистрируйтесь на одно из событий используя кнопку ниже.';
-            $aKeyboard = [$storage->eventList()];
+            $aKeyboard = [$storage->eventNamesList()];
         }
         sendTelegramMessage($chatId, $reply, $aKeyboard);
     }

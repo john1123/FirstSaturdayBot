@@ -210,14 +210,28 @@ class Storage
     /**
      * Возвращает всю информацию о указанном событии(мероприятии)
      */
-    public function eventGet($eventName)
+    public function eventGet($eventId)
     {
         $aData = [];
         $sFilename = $this->dataDir . self::$eventsFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
-        if (array_key_exists($eventName, $aAllData)) {
-            $aData = $aAllData[$eventName];
+        if (array_key_exists($eventId, $aAllData)) {
+            $aData = $aAllData[$eventId];
+        }
+        return $aData;
+    }
+    public function eventGetByName($eventName)
+    {
+        $aData = [];
+        $sFilename = $this->dataDir . self::$eventsFile;
+        $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
+        $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
+        $aData = [];
+        foreach ($aAllData as $aData) {
+            if ($aData['name'] == $eventName) {
+                break;
+            }
         }
         return $aData;
     }
@@ -226,21 +240,28 @@ class Storage
      * Возвращает список известных событий(мероприятий)
      * @return array
      */
-    public function eventList($fullData=false)
+    public function eventList()
     {
         $sFilename = $this->dataDir . self::$eventsFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
-
         // оставить только ещё не закончившиеся события
-        foreach ($aAllData as $eventName => $aData) {
-            $dateEnd = $aAllData[$eventName]['end'];
+        foreach ($aAllData as $eventId => $aData) {
+            $dateEnd = $aAllData[$eventId]['end'];
             if (time() >= strtotime($dateEnd)) {
-                unset ($aAllData[$eventName]);
+                unset ($aAllData[$eventId]);
             }
         }
-
-        return $fullData ? $aAllData : array_keys($aAllData);
+        return $aAllData;
+    }
+    public function eventNamesList()
+    {
+        $aEvents = $this->eventList();
+        $aResult = [];
+        foreach ($aEvents as $aEvent) {
+            $aResult[] = $aEvent['name'];
+        }
+        return $aResult;
     }
 
     /**
@@ -267,10 +288,19 @@ class Storage
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
         //$aAllData[$eventName] = $aEventData;
+        $iId = 0;
+        if (count($aAllData) > 0) {
+            //ksort($aMessages);
+            $sLastKey = array_keys($aAllData)[count($aAllData)-1];
+            if (preg_match('/id(\d+)/', $sLastKey, $regs)) {
+                $iId = $regs[1];
+                $iId++;
+            }
+        }
         $eventStart = array_key_exists('start', $aEventData) ? $aEventData['start'] : date('d.m.Y H:i:s');
         // Продолжительность по-умолчанию 2 часа
         $eventEnd = array_key_exists('end', $aEventData) ? $aEventData['end'] : date('d.m.Y H:i:s', strtotime($eventStart) + 7200);
-        $aAllData[$eventName] = [
+        $aAllData['id'.$iId] = [
             'name' => $eventName,
             'start' => $eventStart,
             'end' => $eventEnd,
@@ -280,6 +310,7 @@ class Storage
 
         ];
         file_put_contents($sFilename, json_encode($aAllData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+        return 'id'.$iId;
     }
 
     /**

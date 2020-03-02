@@ -93,7 +93,8 @@ if($text){
     // --- НАЧАТЬ ---START
     if (preg_match('%^(?:начать|/start(?:\s+(.+)){0,1})$%ui', $text, $regs)) {
         $reply  .= 'Добро пожаловать, ' . $fullUser . PHP_EOL;
-        $storage->userReset($chatId); // Надо ли?
+        $storage->deleteAgentData(false, $eventString);// Очищаем данные
+        $storage->userReset($chatId); // Выходим из всех событий
         $eventString = $regs[1];
         if (preg_match('/^id\d+$/i', $eventString)) {
             $aEventData = $storage->eventGet($eventString);

@@ -77,7 +77,7 @@ class IngressProfile
 //        'Control Fields Created',
         'Portals Captured',
 //        'Unique Portals Captured',
-        'Mods Deployed',
+//        'Mods Deployed',
         'Resonators Destroyed',
         'Portals Neutralized',
 //        'Hacks',

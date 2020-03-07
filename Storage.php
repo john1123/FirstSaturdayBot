@@ -321,11 +321,14 @@ class Storage
         $sFilename = $this->dataDir . self::$eventsFile;
         $sContents = file_exists($sFilename) ? file_get_contents($sFilename) : '';
         $aAllData = strlen($sContents) > 0 ? json_decode($sContents, true) : [];
-        if (array_key_exists($eventname, $aAllData)) {
-            $aAdmins = $aAllData[$eventname]['admins'];
-            return in_array($nickname, $aAdmins);
+        $aAdmins = [];
+        foreach ($aAllData as $aEventData) {
+            if ($aEventData['name'] == $eventname) {
+                $aAdmins = $aEventData['admins'];
+                break;
+            }
         }
-        return false;
+        return in_array($nickname, $aAdmins);
     }
 
     /**

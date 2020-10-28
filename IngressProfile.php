@@ -55,8 +55,8 @@ class IngressProfile
         'Prime Challenges',
         'Intel Ops Missions',
         'Stealth Ops Missions',
-        'Umbra: Unique Resonator Slots Deployed',
-        'Didact Fields Created',
+        'OPR Live Events',
+        'Level',
         'Recursions',
     ];
     /** @var $firstValuesPhrase - Very first parameters name */
